@@ -1,0 +1,48 @@
+name: Deploy to AWS S3
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Use Node.js 20
+      uses: actions/setup-node@v2
+      with:
+        node-version: '20'
+
+    - name: Install dependencies and build
+      run: |
+        npm install
+        CI=false npm run build
+      env:
+        PORT: 3001
+        HTTPS: true
+        REACT_APP_SITE_NAME: 'AIXray'
+        REACT_APP_ENCRYPT_IV: 'e48aff62dfd827bb79eed287ae2a5a93'
+        REACT_APP_ENCRYPT_KEY: 'ipassenckey@admin1234y@admin1234'
+        REACT_APP_DOMAIN: 'http://localhost:4000/'
+        REACT_APP_API_URL: 'https://api.the-decxpert.com'
+        REACT_APP_ALLOWED_ORIGIN: 'http://localhost:4000/'
+        REACT_APP_API_KEY: ''
+        RAZORPAY_KEY: 'rzp_live_zy9SFzkiV2kpuL'
+        REACT_APP_API_SC_CODE: '["ip200", "ip201", "dc200"]'
+        REACT_APP_SUPPORT_UPLOAD_FILE_TYPE: 'doc,docx,pdf,xls,xlsx,png,gif,jpg,jpeg,jfif,svg,webp,msg,eml,zip,ppt'
+        
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+    - name: Deploy static site to S3 bucket
+      run: aws s3 sync ./build/ s3://s3-new-decx2 --delete
