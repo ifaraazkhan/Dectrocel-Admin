@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../context/ProductContext';
 import dashboardAPI from '../api/dashboard';
 import subscriptionsAPI from '../api/subscriptions';
+import { ctDashboardAPI } from '../api/ctAdmin';
 import toast from 'react-hot-toast';
-import { Key, Users, CreditCard, DollarSign } from 'lucide-react';
+import { Key, Users, CreditCard, DollarSign, CheckCircle, XCircle, Loader, Coins } from 'lucide-react';
 import { formatDate } from '../utils/dateFormatter';
 import UsageComparisonChart from '../components/dashboard/UsageComparisonChart';
 import LicensesByCategoryModal from '../components/dashboard/LicensesByCategoryModal';
@@ -22,14 +23,93 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
   </div>
 );
 
-const ComingSoon = () => (
-  <div className="flex items-center justify-center h-96">
-    <div className="text-center">
-      <h2 className="text-2xl font-bold text-gray-700">Coming Soon</h2>
-      <p className="text-gray-500 mt-2">CT product dashboard will be available soon</p>
+const STATUS_COLORS = {
+  completed:  'bg-green-100 text-green-800',
+  failed:     'bg-red-100 text-red-800',
+  processing: 'bg-blue-100 text-blue-800',
+  uploading:  'bg-yellow-100 text-yellow-800',
+  preparing:  'bg-gray-100 text-gray-700',
+};
+
+const CTDashboard = () => {
+  const [ctStats, setCtStats] = useState(null);
+  const [loading, setLoading]  = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const resp = await ctDashboardAPI.getStats();
+        if (resp.status_code === 'dc200') setCtStats(resp.results);
+      } catch {
+        toast.error('Failed to fetch CT dashboard stats');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  const lic = ctStats?.licenses  || {};
+  const ana = ctStats?.analyses  || {};
+  const recent = ctStats?.recent_analyses || [];
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">CT Dashboard</h1>
+
+      {/* License stats */}
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Licenses</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard title="Total Licenses"      value={lic.total_licenses        || 0} icon={Key}         color="bg-primary-600" />
+        <StatCard title="In Use"              value={lic.in_use                || 0} icon={Users}        color="bg-blue-600"    />
+        <StatCard title="Available"           value={lic.available             || 0} icon={CheckCircle}  color="bg-green-600"   />
+        <StatCard title="Credits Remaining"   value={lic.total_credits_remaining || 0} icon={Coins}     color="bg-orange-600"  />
+      </div>
+
+      {/* Analysis stats */}
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">CT Analyses</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard title="Total Scans"     value={ana.total_scans  || 0} icon={Key}          color="bg-gray-600"    />
+        <StatCard title="Completed"       value={ana.completed    || 0} icon={CheckCircle}   color="bg-green-600"   />
+        <StatCard title="Failed"          value={ana.failed       || 0} icon={XCircle}       color="bg-red-600"     />
+        <StatCard title="In Progress"     value={ana.in_progress  || 0} icon={Loader}        color="bg-yellow-500"  />
+      </div>
+
+      {/* Recent analyses */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent CT Analyses</h2>
+        {recent.length === 0 ? (
+          <p className="text-gray-400 text-sm">No analyses yet</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {recent.map((item, i) => (
+              <div key={i} className="flex items-center justify-between py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-900 truncate">{item.patient_name || 'Unknown Patient'}</p>
+                  <p className="text-xs text-gray-400 font-mono truncate">{item.license_key}</p>
+                </div>
+                <div className="flex items-center gap-3 ml-4 shrink-0">
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${STATUS_COLORS[item.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {item.status}
+                  </span>
+                  <span className="text-xs text-gray-400">{item.created_at}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Dashboard = () => {
   const { selectedProduct } = useProduct();
@@ -76,7 +156,7 @@ const Dashboard = () => {
   };
 
   if (selectedProduct === 'ct') {
-    return <ComingSoon />;
+    return <CTDashboard />;
   }
 
   if (loading) {

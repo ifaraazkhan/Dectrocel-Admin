@@ -41,19 +41,67 @@ const Sidebar = ({ product }) => {
     audit: { path: '/audit', icon: History, label: 'Audit Logs' }
   };
 
-  // CT navigation items (empty for now)
-  const ctNavItems = [];
-
   if (product === 'ct') {
+    const navLinkClass = ({ isActive }) =>
+      `flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
+        isActive
+          ? 'bg-primary-50 text-primary-600 font-medium'
+          : 'text-gray-600 hover:bg-gray-50'
+      }`;
+
     return (
       <div className="w-64 bg-white border-r min-h-screen">
         <div className="p-6">
           <h1 className="text-2xl font-bold text-primary-600">DecXpert</h1>
           <p className="text-sm text-gray-500">Admin Panel</p>
         </div>
-        <div className="text-center text-gray-400 py-8 px-3">
-          <p className="text-sm">Coming Soon</p>
-        </div>
+
+        <nav className="px-3 pb-6">
+          {/* Dashboard */}
+          <NavLink to="/" end className={navLinkClass}>
+            <LayoutDashboard size={20} />
+            <span>Dashboard</span>
+          </NavLink>
+
+          <div className="border-t border-gray-200 my-3" />
+
+          {/* Desktop EXE section */}
+          <div className="mb-2">
+            <button
+              onClick={() => setDesktopExpanded(!desktopExpanded)}
+              className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Monitor size={18} />
+                <span>Desktop EXE</span>
+              </div>
+              {desktopExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+
+            {desktopExpanded && (
+              <div className="ml-4 mt-1">
+                <NavLink to="/licenses" className={navLinkClass}>
+                  <Key size={18} />
+                  <span className="text-sm">Licenses</span>
+                </NavLink>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-gray-200 my-3" />
+
+          {/* Reports */}
+          <NavLink to="/reports" className={navLinkClass}>
+            <FileText size={20} />
+            <span>Reports</span>
+          </NavLink>
+
+          {/* Audit Logs */}
+          <NavLink to="/audit" className={navLinkClass}>
+            <History size={20} />
+            <span>Audit Logs</span>
+          </NavLink>
+        </nav>
       </div>
     );
   }

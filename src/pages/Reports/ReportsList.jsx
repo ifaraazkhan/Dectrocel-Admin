@@ -1,8 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProduct } from '../../context/ProductContext';
-import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell } from 'lucide-react';
-import ComingSoon from '../ComingSoon';
+import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick, badge }) => (
   <div
@@ -26,12 +25,55 @@ const ReportCard = ({ title, description, icon: Icon, onClick, badge }) => (
   </div>
 );
 
+const CTReportsList = () => {
+  const navigate = useNavigate();
+  const ctReports = [
+    {
+      id: 'ct-analyses',
+      title: 'CT Analyses Report',
+      description: 'View all CT scan analyses with status (completed, failed, processing, uploading, preparing), patient info, job IDs and error details',
+      icon: Cpu,
+      path: '/reports/ct-analyses',
+      badge: 'CSV Export',
+    },
+    {
+      id: 'ct-licenses',
+      title: 'CT License Report',
+      description: 'CT license credit balances, scan usage per license, expiry dates and assignment details',
+      icon: Key,
+      path: '/reports/ct-licenses',
+      badge: 'CSV Export',
+    },
+  ];
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">CT Reports</h1>
+        <p className="text-gray-600 mt-1">Generate and download CT product reports</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {ctReports.map((report) => (
+          <ReportCard
+            key={report.id}
+            title={report.title}
+            description={report.description}
+            icon={report.icon}
+            badge={report.badge}
+            onClick={() => navigate(report.path)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const ReportsList = () => {
   const { selectedProduct } = useProduct();
   const navigate = useNavigate();
 
   if (selectedProduct === 'ct') {
-    return <ComingSoon />;
+    return <CTReportsList />;
   }
 
   const reports = [

@@ -11,11 +11,11 @@ const MainLayout = ({ children }) => {
       {/* Sidebar - content changes based on selectedProduct */}
       <Sidebar product={selectedProduct} />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header now contains Product Switcher (X-ray/CT tabs) on left and User menu on right */}
         <Header />
 
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>
