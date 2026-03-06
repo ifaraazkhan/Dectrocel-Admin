@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProduct } from '../../context/ProductContext';
-import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key } from 'lucide-react';
+import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key, Send } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick, badge }) => (
   <div
@@ -107,6 +107,14 @@ const ReportsList = () => {
       description: 'View all AI predictions and analysis results from chest X-ray scans',
       icon: Brain,
       path: '/reports/ai-analysis',
+      badge: 'CSV Export',
+    },
+    {
+      id: 'demo-requests',
+      title: 'Demo Requests',
+      description: 'View all product demo requests submitted from the website with contact details and intent of use',
+      icon: Send,
+      path: '/reports/demo-requests',
       badge: 'CSV Export',
     },
     {
