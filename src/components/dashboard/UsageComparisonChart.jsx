@@ -15,10 +15,10 @@ const UsageComparisonChart = ({ data, onCategoryClick }) => {
   // Color mapping for each category
   const colorMap = {
     'High Usage': { bg: 'bg-red-500', text: 'text-red-700', light: 'bg-red-100' },
-    'Medium Usage': { bg: 'bg-yellow-500', text: 'text-yellow-700', light: 'bg-yellow-100' },
-    'Low Usage': { bg: 'bg-green-500', text: 'text-green-700', light: 'bg-green-100' },
-    'Unused': { bg: 'bg-blue-500', text: 'text-blue-700', light: 'bg-blue-100' },
-    'No Credits': { bg: 'bg-gray-500', text: 'text-gray-700', light: 'bg-gray-100' }
+    'Medium Usage': { bg: 'bg-sky-400', text: 'text-sky-600', light: 'bg-sky-100' },
+    'Low Usage': { bg: 'bg-blue-400', text: 'text-blue-600', light: 'bg-blue-100' },
+    'Unused': { bg: 'bg-blue-600', text: 'text-blue-700', light: 'bg-blue-100' },
+    'No Credits': { bg: 'bg-slate-500', text: 'text-slate-700', light: 'bg-slate-100' }
   };
 
   // Find max count for scaling bars
@@ -33,15 +33,15 @@ const UsageComparisonChart = ({ data, onCategoryClick }) => {
           <span className="text-gray-600">High Usage (&gt;80% used)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+          <div className="w-3 h-3 bg-sky-400 rounded"></div>
           <span className="text-gray-600">Medium Usage (50-80% used)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded"></div>
+          <div className="w-3 h-3 bg-blue-400 rounded"></div>
           <span className="text-gray-600">Low Usage (&lt;50% used)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded"></div>
+          <div className="w-3 h-3 bg-blue-600 rounded"></div>
           <span className="text-gray-600">Unused (0% used)</span>
         </div>
       </div>

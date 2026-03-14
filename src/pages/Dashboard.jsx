@@ -70,17 +70,17 @@ const CTDashboard = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard title="Total Licenses"      value={lic.total_licenses        || 0} icon={Key}         color="bg-primary-600" />
         <StatCard title="In Use"              value={lic.in_use                || 0} icon={Users}        color="bg-blue-600"    />
-        <StatCard title="Available"           value={lic.available             || 0} icon={CheckCircle}  color="bg-green-600"   />
-        <StatCard title="Credits Remaining"   value={lic.total_credits_remaining || 0} icon={Coins}     color="bg-orange-600"  />
+        <StatCard title="Available"           value={lic.available             || 0} icon={CheckCircle}  color="bg-teal-600"    />
+        <StatCard title="Credits Remaining"   value={lic.total_credits_remaining || 0} icon={Coins}     color="bg-blue-700"    />
       </div>
 
       {/* Analysis stats */}
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">CT Analyses</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Total Scans"     value={ana.total_scans  || 0} icon={Key}          color="bg-gray-600"    />
-        <StatCard title="Completed"       value={ana.completed    || 0} icon={CheckCircle}   color="bg-green-600"   />
+        <StatCard title="Total Scans"     value={ana.total_scans  || 0} icon={Key}          color="bg-slate-600"   />
+        <StatCard title="Completed"       value={ana.completed    || 0} icon={CheckCircle}   color="bg-teal-600"    />
         <StatCard title="Failed"          value={ana.failed       || 0} icon={XCircle}       color="bg-red-600"     />
-        <StatCard title="In Progress"     value={ana.in_progress  || 0} icon={Loader}        color="bg-yellow-500"  />
+        <StatCard title="In Progress"     value={ana.in_progress  || 0} icon={Loader}        color="bg-sky-500"     />
       </div>
 
       {/* Recent analyses */}
@@ -184,19 +184,19 @@ const Dashboard = () => {
           title="Active Subscriptions"
           value={subscriptionStats?.active_subscriptions || 0}
           icon={CreditCard}
-          color="bg-green-600"
+          color="bg-sky-500"
         />
         <StatCard
           title="Subscription Revenue"
           value={`₹${subscriptionStats?.total_revenue || 0}`}
           icon={DollarSign}
-          color="bg-orange-600"
+          color="bg-blue-700"
         />
         <StatCard
           title="Total Users"
           value={stats?.total_users || 0}
           icon={Users}
-          color="bg-purple-600"
+          color="bg-indigo-600"
         />
       </div>
 
