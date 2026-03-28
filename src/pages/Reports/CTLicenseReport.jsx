@@ -1,8 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, Search, X } from 'lucide-react';
 import { ctReportsAPI } from '../../api/ctAdmin';
 import toast from 'react-hot-toast';
+
+const SortIcon = ({ column, sortConfig }) => {
+  if (sortConfig.key !== column) return <ChevronsUpDown size={13} className="text-gray-400 ml-1 inline" />;
+  return sortConfig.direction === 'asc'
+    ? <ChevronUp size={13} className="text-primary-600 ml-1 inline" />
+    : <ChevronDown size={13} className="text-primary-600 ml-1 inline" />;
+};
+
+const useSortedData = (data, sortConfig) =>
+  useMemo(() => {
+    if (!sortConfig.key) return data;
+    return [...data].sort((a, b) => {
+      const av = a[sortConfig.key] ?? '';
+      const bv = b[sortConfig.key] ?? '';
+      const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      return sortConfig.direction === 'asc' ? cmp : -cmp;
+    });
+  }, [data, sortConfig]);
 
 const CTLicenseReport = () => {
   const navigate = useNavigate();
@@ -10,6 +28,8 @@ const CTLicenseReport = () => {
   const [data,         setData]         = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [search,       setSearch]       = useState('');
+  const [sortConfig,   setSortConfig]   = useState({ key: null, direction: 'asc' });
 
   const fetchData = async () => {
     try {
@@ -29,6 +49,31 @@ const CTLicenseReport = () => {
   };
 
   useEffect(() => { fetchData(); }, [statusFilter]);
+
+  const handleSort = (key) => setSortConfig(prev =>
+    prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }
+  );
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return data;
+    const q = search.trim().toLowerCase();
+    return data.filter(r =>
+      r.license_key?.toLowerCase().includes(q) ||
+      r.fullname?.toLowerCase().includes(q) ||
+      r.username?.toLowerCase().includes(q) ||
+      r.mobile?.toLowerCase().includes(q) ||
+      r.vendor_name?.toLowerCase().includes(q)
+    );
+  }, [data, search]);
+
+  const sorted = useSortedData(filtered, sortConfig);
+
+  const th = (label, key) => (
+    <th onClick={() => handleSort(key)}
+      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap">
+      {label}<SortIcon column={key} sortConfig={sortConfig} />
+    </th>
+  );
 
   const downloadCSV = () => {
     if (data.length === 0) return;
@@ -76,51 +121,68 @@ const CTLicenseReport = () => {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate('/reports')} className="text-gray-500 hover:text-gray-700">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">CT License Report</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Credit balance and usage per CT license</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="text-gray-500 hover:text-gray-700">
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">CT License Report</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Credit balance and usage per CT license</p>
+          </div>
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3 mb-5 items-center">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        >
-          <option value="">All Statuses</option>
-          <option value="A">Available</option>
-          <option value="U">In Use</option>
-          <option value="R">Revoked</option>
-          <option value="E">Expired</option>
-        </select>
-        <button
-          onClick={fetchData}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-        >
-          <RefreshCw size={16} /> Refresh
-        </button>
         <button
           onClick={downloadCSV}
           disabled={data.length === 0}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 ml-auto"
+          className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
         >
           <Download size={16} /> Export CSV
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 mb-5">
+        <div className="relative flex-1 sm:flex-none sm:w-64">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search key, name, mobile..."
+            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="A">Available</option>
+            <option value="U">In Use</option>
+            <option value="R">Revoked</option>
+            <option value="E">Expired</option>
+          </select>
+          <button onClick={fetchData}
+            className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shrink-0">
+            <RefreshCw size={15} />
+          </button>
+        </div>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         {[
-          { label: 'Total Licenses',    value: data.length },
-          { label: 'Total CT Scans',    value: data.reduce((s, r) => s + (parseInt(r.total_scans) || 0), 0) },
-          { label: 'Completed Scans',   value: data.reduce((s, r) => s + (parseInt(r.completed_scans) || 0), 0) },
-          { label: 'Credits Remaining', value: data.reduce((s, r) => s + (parseInt(r.credits_remaining) || 0), 0) },
+          { label: 'Total Licenses',  value: data.length },
+          { label: 'Total CT Scans',  value: data.reduce((s, r) => s + (parseInt(r.total_scans)       || 0), 0) },
+          { label: 'Completed Scans', value: data.reduce((s, r) => s + (parseInt(r.completed_scans)   || 0), 0) },
+          { label: 'Failed Scans',    value: data.reduce((s, r) => s + (parseInt(r.failed_scans)      || 0), 0) },
         ].map(({ label, value }) => (
           <div key={label} className="bg-white rounded-lg border border-gray-200 p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">{value}</div>
@@ -133,31 +195,31 @@ const CTLicenseReport = () => {
       {loading ? (
         <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full divide-y divide-gray-200 text-sm table-fixed">
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-36">License Key</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Status</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Credits</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">Scope</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name / User</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-28">Mobile</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor / Location</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Expiry</th>
-                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">Total</th>
-                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">Done</th>
-                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">Failed</th>
+                {th('License Key',     'license_key')}
+                {th('Status',          'license_status')}
+                {th('Credits',         'credits_remaining')}
+                {th('Scope',           'license_app_scope')}
+                {th('Name / User',     'fullname')}
+                {th('Mobile',          'mobile')}
+                {th('Vendor',          'vendor_name')}
+                {th('Expiry',          'expiry_date')}
+                {th('Total',           'total_scans')}
+                {th('Done',            'completed_scans')}
+                {th('Failed',          'failed_scans')}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {data.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="px-6 py-12 text-center text-gray-400">
-                    No CT licenses found
+                    {search ? 'No results match your search' : 'No CT licenses found'}
                   </td>
                 </tr>
-              ) : data.map((row, idx) => (
+              ) : sorted.map((row, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
                   <td className="px-3 py-3 font-mono text-xs text-gray-900 truncate" title={row.license_key}>{row.license_key}</td>
                   <td className="px-3 py-3">

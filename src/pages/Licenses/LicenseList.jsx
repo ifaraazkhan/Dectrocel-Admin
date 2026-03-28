@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useProduct } from '../../context/ProductContext';
-import { Plus, PackagePlus } from 'lucide-react';
+import { Plus, PackagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Search, X } from 'lucide-react';
 import licensesAPI from '../../api/licenses';
 import { ctLicensesAPI } from '../../api/ctAdmin';
 import toast from 'react-hot-toast';
@@ -15,8 +15,30 @@ import CarryForwardModal     from '../../components/licenses/CarryForwardModal';
 import BlockLicenseModal     from '../../components/licenses/BlockLicenseModal';
 
 // CT components
-import CTCreateLicenseModal  from '../../components/licenses/CTCreateLicenseModal';
-import CTLicenseDetailModal  from '../../components/licenses/CTLicenseDetailModal';
+import CTCreateLicenseModal     from '../../components/licenses/CTCreateLicenseModal';
+import CTLicenseDetailModal     from '../../components/licenses/CTLicenseDetailModal';
+import CTBulkGenerationModal    from '../../components/licenses/CTBulkGenerationModal';
+
+// ─── Sort helpers ─────────────────────────────────────────────────────────────
+
+const SortIcon = ({ column, sortConfig }) => {
+  if (sortConfig.key !== column)
+    return <ChevronsUpDown size={13} className="text-gray-400 ml-1 inline" />;
+  return sortConfig.direction === 'asc'
+    ? <ChevronUp size={13} className="text-primary-600 ml-1 inline" />
+    : <ChevronDown size={13} className="text-primary-600 ml-1 inline" />;
+};
+
+const useSortedData = (data, sortConfig) =>
+  useMemo(() => {
+    if (!sortConfig.key) return data;
+    return [...data].sort((a, b) => {
+      const av = a[sortConfig.key] ?? '';
+      const bv = b[sortConfig.key] ?? '';
+      const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      return sortConfig.direction === 'asc' ? cmp : -cmp;
+    });
+  }, [data, sortConfig]);
 
 // ─── X-ray License List ───────────────────────────────────────────────────────
 
@@ -26,30 +48,75 @@ const XrayLicenseList = () => {
   const [page,     setPage]     = useState(1);
   const [total,    setTotal]    = useState(0);
 
-  const [showCreateModal,      setShowCreateModal]      = useState(false);
-  const [showBulkModal,        setShowBulkModal]        = useState(false);
-  const [showDetailModal,      setShowDetailModal]      = useState(false);
-  const [showCarryForwardModal,setShowCarryForwardModal] = useState(false);
-  const [showBlockModal,       setShowBlockModal]       = useState(false);
-  const [isUnblock,            setIsUnblock]            = useState(false);
-  const [selectedLicense,      setSelectedLicense]      = useState(null);
+  // Search
+  const [searchInput, setSearchInput] = useState('');
+  const [search,      setSearch]      = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  useEffect(() => { fetchLicenses(); }, [page]);
+  // Sort
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
-  const fetchLicenses = async () => {
+  // Modals
+  const [showCreateModal,       setShowCreateModal]       = useState(false);
+  const [showBulkModal,         setShowBulkModal]         = useState(false);
+  const [showDetailModal,       setShowDetailModal]       = useState(false);
+  const [showCarryForwardModal, setShowCarryForwardModal] = useState(false);
+  const [showBlockModal,        setShowBlockModal]        = useState(false);
+  const [isUnblock,             setIsUnblock]             = useState(false);
+  const [selectedLicense,       setSelectedLicense]       = useState(null);
+
+  const fetchLicenses = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await licensesAPI.getAll({ page, limit: 50 });
+      const response = await licensesAPI.getAll({
+        page,
+        limit: 50,
+        search: search.trim() || undefined,
+        status: statusFilter  || undefined,
+      });
       if (response.status_code === 'dc200') {
         setLicenses(response.results.licenses);
         setTotal(response.results.pagination.total);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch licenses');
     } finally {
       setLoading(false);
     }
+  }, [page, search, statusFilter]);
+
+  useEffect(() => { fetchLicenses(); }, [fetchLicenses]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput);
   };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setPage(1);
+  };
+
+  const handleSort = (key) => {
+    setSortConfig(prev =>
+      prev.key === key
+        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' }
+    );
+  };
+
+  const sorted = useSortedData(licenses, sortConfig);
+
+  const th = (label, key) => (
+    <th
+      onClick={() => handleSort(key)}
+      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
+    >
+      {label}<SortIcon column={key} sortConfig={sortConfig} />
+    </th>
+  );
 
   if (loading) {
     return <div className="flex items-center justify-center h-96 text-gray-500">Loading...</div>;
@@ -57,41 +124,102 @@ const XrayLicenseList = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">License Management</h1>
-        <div className="flex gap-3">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">License Management</h1>
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
           >
-            <Plus size={18} /> Create License
+            <Plus size={16} /> <span className="hidden xs:inline">Create</span><span className="xs:hidden">Create</span>
           </button>
           <button
             onClick={() => setShowBulkModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors"
           >
-            <PackagePlus size={18} /> Bulk Generate
+            <PackagePlus size={16} /> <span>Bulk Generate</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Filters */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 mb-4">
+        <form onSubmit={handleSearch} className="flex gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Search key, name, mobile..."
+              className="pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 w-full sm:w-64"
+            />
+            {searchInput && (
+              <button type="button" onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <button type="submit"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 shrink-0">
+            Search
+          </button>
+        </form>
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="A">Available</option>
+            <option value="U">In Use</option>
+            <option value="CF">Carried Forward</option>
+            <option value="R">Revoked</option>
+            <option value="E">Expired</option>
+          </select>
+          {(search || statusFilter) && (
+            <button onClick={() => { clearSearch(); setStatusFilter(''); setPage(1); }}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-md hover:bg-gray-50 shrink-0">
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {['License Key','Status','Plan','Credits Left','Username','Actions'].map(h => (
-                <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
+              {th('License Key', 'license_key')}
+              {th('Status', 'status')}
+              {th('Plan', 'plan_name')}
+              {th('Credits Left', 'credit_left')}
+              {th('Username', 'username')}
+              {th('End Date', 'end_date')}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {licenses.map((license) => (
-              <tr key={license.license_id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{license.license_key}</td>
+            {sorted.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  {search || statusFilter ? 'No licenses match your filters' : 'No licenses found'}
+                </td>
+              </tr>
+            ) : sorted.map((license) => (
+              <tr key={license.license_id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{license.license_key}</td>
                 <td className="px-6 py-4 whitespace-nowrap"><LicenseStatusBadge status={license.status} /></td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.plan_name || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.credit_left ?? 0}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.username || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.plan_name || '—'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{license.credit_left ?? 0}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.username || '—'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {license.end_date ? new Date(license.end_date).toLocaleDateString() : '—'}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <LicenseActionButtons
                     license={license}
@@ -107,13 +235,14 @@ const XrayLicenseList = () => {
         </table>
       </div>
 
+      {/* Pagination */}
       {total > 50 && (
-        <div className="mt-4 flex justify-center gap-2">
+        <div className="mt-4 flex justify-center items-center gap-2">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
             className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
             Previous
           </button>
-          <span className="px-4 py-2 text-sm text-gray-700">Page {page}</span>
+          <span className="px-4 py-2 text-sm text-gray-600">Page {page} · {total} total</span>
           <button onClick={() => setPage(p => p + 1)} disabled={page * 50 >= total}
             className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
             Next
@@ -121,6 +250,7 @@ const XrayLicenseList = () => {
         </div>
       )}
 
+      {/* Modals */}
       <CreateLicenseModal   isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={fetchLicenses} />
       <BulkGenerationModal  isOpen={showBulkModal}   onClose={() => setShowBulkModal(false)}   onSuccess={fetchLicenses} />
       <LicenseDetailModal
@@ -150,43 +280,71 @@ const STATUS_LABELS = { A: 'Available', U: 'In Use', R: 'Revoked', E: 'Expired' 
 const SCOPE_LABELS  = { ct: 'CT Only', both: 'CT + X-ray' };
 
 const CTLicenseList = () => {
-  const [licenses,       setLicenses]       = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [page,           setPage]           = useState(1);
-  const [total,          setTotal]          = useState(0);
-  const [search,         setSearch]         = useState('');
-  const [statusFilter,   setStatusFilter]   = useState('');
+  const [licenses,     setLicenses]     = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [page,         setPage]         = useState(1);
+  const [total,        setTotal]        = useState(0);
+  const [searchInput,  setSearchInput]  = useState('');
+  const [search,       setSearch]       = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortConfig,   setSortConfig]   = useState({ key: null, direction: 'asc' });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBulkModal,   setShowBulkModal]   = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedId,      setSelectedId]      = useState(null);
 
-  const fetchLicenses = async () => {
+  const fetchLicenses = useCallback(async () => {
     try {
       setLoading(true);
       const response = await ctLicensesAPI.getAll({
         page, limit: 50,
-        search:     search.trim() || undefined,
-        status:     statusFilter  || undefined,
+        search: search.trim() || undefined,
+        status: statusFilter  || undefined,
       });
       if (response.status_code === 'dc200') {
         setLicenses(response.results.licenses);
         setTotal(response.results.pagination.total);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch CT licenses');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, statusFilter]);
 
-  useEffect(() => { fetchLicenses(); }, [page, statusFilter]);
+  useEffect(() => { fetchLicenses(); }, [fetchLicenses]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchLicenses();
+    setSearch(searchInput);
   };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setPage(1);
+  };
+
+  const handleSort = (key) => {
+    setSortConfig(prev =>
+      prev.key === key
+        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' }
+    );
+  };
+
+  const sorted = useSortedData(licenses, sortConfig);
+
+  const th = (label, key) => (
+    <th
+      onClick={() => handleSort(key)}
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
+    >
+      {label}<SortIcon column={key} sortConfig={sortConfig} />
+    </th>
+  );
 
   if (loading) {
     return <div className="flex items-center justify-center h-96 text-gray-500">Loading CT licenses...</div>;
@@ -195,78 +353,105 @@ const CTLicenseList = () => {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">CT License Management</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
-        >
-          <Plus size={18} /> Create CT License
-        </button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">CT License Management</h1>
+        <div className="flex gap-2 sm:gap-3">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
+          >
+            <Plus size={16} /> Create License
+          </button>
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 transition-colors"
+          >
+            <PackagePlus size={16} /> Bulk Generate
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search license key, name, mobile..."
-            className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
-          />
-          <button type="submit" className="px-4 py-2 text-sm text-white bg-primary-600 rounded-md hover:bg-primary-700">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 mb-4">
+        <form onSubmit={handleSearch} className="flex gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Search key, name, mobile..."
+              className="pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 w-full sm:w-64"
+            />
+            {searchInput && (
+              <button type="button" onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <button type="submit"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 shrink-0">
             Search
           </button>
         </form>
-        <select
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-        >
-          <option value="">All Statuses</option>
-          <option value="A">Available</option>
-          <option value="U">In Use</option>
-          <option value="R">Revoked</option>
-          <option value="E">Expired</option>
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="A">Available</option>
+            <option value="U">In Use</option>
+            <option value="R">Revoked</option>
+            <option value="E">Expired</option>
+          </select>
+          {(search || statusFilter) && (
+            <button onClick={() => { clearSearch(); setStatusFilter(''); setPage(1); }}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-md hover:bg-gray-50 shrink-0">
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              {['License Key','Status','CT Credits','Scope','Name / Username','Mobile','Expiry','Actions'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
+              {th('License Key', 'license_key')}
+              {th('Status', 'status')}
+              {th('CT Credits', 'ct_credits')}
+              {th('Scope', 'license_app_scope')}
+              {th('Name / Username', 'fullname')}
+              {th('Mobile', 'mobile')}
+              {th('Expiry', 'end_date')}
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {licenses.length === 0 ? (
+            {sorted.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
-                  No CT licenses found
+                  {search || statusFilter ? 'No CT licenses match your filters' : 'No CT licenses found'}
                 </td>
               </tr>
-            ) : licenses.map((lic) => (
-              <tr key={lic.license_id} className="hover:bg-gray-50">
+            ) : sorted.map((lic) => (
+              <tr key={lic.license_id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-900">{lic.license_key}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <LicenseStatusBadge status={lic.status} />
-                </td>
+                <td className="px-4 py-3 whitespace-nowrap"><LicenseStatusBadge status={lic.status} /></td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{lic.ct_credits ?? 0}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                  <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
                     {SCOPE_LABELS[lic.license_app_scope] || lic.license_app_scope}
                   </span>
                 </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{lic.fullname || lic.username || '—'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{lic.mobile || '—'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  {lic.fullname || lic.username || '-'}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{lic.mobile || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  {lic.end_date ? new Date(lic.end_date).toLocaleDateString() : '-'}
+                  {lic.end_date ? new Date(lic.end_date).toLocaleDateString() : '—'}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <button
@@ -284,12 +469,12 @@ const CTLicenseList = () => {
 
       {/* Pagination */}
       {total > 50 && (
-        <div className="mt-4 flex justify-center gap-2">
+        <div className="mt-4 flex justify-center items-center gap-2">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
             className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
             Previous
           </button>
-          <span className="px-4 py-2 text-sm text-gray-700">Page {page} · {total} total</span>
+          <span className="px-4 py-2 text-sm text-gray-600">Page {page} · {total} total</span>
           <button onClick={() => setPage(p => p + 1)} disabled={page * 50 >= total}
             className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
             Next
@@ -297,17 +482,23 @@ const CTLicenseList = () => {
         </div>
       )}
 
+      {/* Modals */}
       <CTCreateLicenseModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => { setShowCreateModal(false); fetchLicenses(); }}
       />
+      <CTBulkGenerationModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onSuccess={fetchLicenses}
+      />
       <CTLicenseDetailModal
         isOpen={showDetailModal}
         licenseId={selectedId}
         onClose={() => { setShowDetailModal(false); setSelectedId(null); }}
-        onBlock={() => fetchLicenses()}
-        onUnblock={() => fetchLicenses()}
+        onBlock={fetchLicenses}
+        onUnblock={fetchLicenses}
       />
     </div>
   );

@@ -1,111 +1,109 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, Copy } from 'lucide-react';
+import { X, AlertTriangle, Search } from 'lucide-react';
 import licensesAPI from '../../api/licenses';
 import toast from 'react-hot-toast';
 import LicenseStatusBadge from './LicenseStatusBadge';
 
 const CarryForwardModal = ({ isOpen, license, onClose, onSuccess }) => {
-  const [loading, setLoading] = useState(false);
-  const [newLicense, setNewLicense] = useState(null);
-  const [transferUserInfo, setTransferUserInfo] = useState(true);
+  const [loading,       setLoading]       = useState(false);
+  const [searchInput,   setSearchInput]   = useState('');
+  const [searching,     setSearching]     = useState(false);
+  const [targetLicense, setTargetLicense] = useState(null);
+  const [searchError,   setSearchError]   = useState('');
+  const [done,          setDone]          = useState(null); // result after success
 
-  const handleCarryForward = async () => {
-    if (!license) return;
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchInput.trim()) return;
+    setSearchError('');
+    setTargetLicense(null);
+    setSearching(true);
+    try {
+      // Search by license key or ID
+      const resp = await licensesAPI.getAll({ search: searchInput.trim(), limit: 5 });
+      if (resp.status_code === 'dc200' && resp.results.licenses.length > 0) {
+        // Pick the best match — exact key first
+        const exact = resp.results.licenses.find(
+          l => l.license_key === searchInput.trim().toUpperCase()
+        );
+        const found = exact || resp.results.licenses[0];
 
+        if (
+          String(found.license_id) === String(license.license_id) ||
+          found.license_key === license.license_key
+        ) {
+          setSearchError('Cannot carry forward to the same license.');
+        } else if (!['A', 'U'].includes(found.status)) {
+          setSearchError(`Target license is "${found.status}" — it must be Active (A) or In Use (U).`);
+        } else {
+          setTargetLicense(found);
+        }
+      } else {
+        setSearchError('No license found with that key.');
+      }
+    } catch {
+      setSearchError('Search failed. Try again.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!license || !targetLicense) return;
     setLoading(true);
     try {
-      const response = await licensesAPI.carryForward(license.license_id);
-
+      const response = await licensesAPI.carryForward(license.license_id, targetLicense.license_id);
       if (response.status_code === 'dc200') {
-        setNewLicense(response.results.new_license);
-        toast.success('License carried forward successfully');
+        setDone(response.results);
+        toast.success(response.message);
         onSuccess();
+      } else {
+        toast.error(response.message || 'Failed to carry forward');
       }
     } catch (error) {
-      console.error('Error carrying forward license:', error);
       toast.error(error.response?.data?.message || 'Failed to carry forward license');
     } finally {
       setLoading(false);
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
-  };
-
   const handleClose = () => {
-    setNewLicense(null);
-    setTransferUserInfo(true);
+    setSearchInput('');
+    setTargetLicense(null);
+    setSearchError('');
+    setDone(null);
     onClose();
   };
 
   if (!isOpen || !license) return null;
 
-  // Success view after carry forward
-  if (newLicense) {
+  // ── Success view ─────────────────────────────────────────────────────────────
+  if (done) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
           <div className="flex items-center justify-between p-6 border-b">
             <h2 className="text-xl font-semibold text-gray-900">Carry Forward Complete</h2>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={24} />
-            </button>
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
           </div>
-
           <div className="p-6 space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800 font-medium mb-3">
-                ✓ Credits transferred successfully
-              </p>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Old License:</span>
-                  <span className="font-mono text-gray-900">{license.license_key}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className="text-purple-600 font-medium">Carried Forward</span>
-                </div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm space-y-2">
+              <p className="text-green-800 font-medium">✓ {done.credits_moved} credits transferred successfully</p>
+              <div className="flex justify-between text-gray-600">
+                <span>Source license:</span>
+                <span className="font-mono text-gray-900">{license.license_key}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Target license:</span>
+                <span className="font-mono text-gray-900">{done.target_license_key}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Target new balance:</span>
+                <span className="font-bold text-green-700">{done.target_new_credit_left} credits</span>
               </div>
             </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-blue-800 font-medium mb-3">New License Created</p>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">License Key:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-gray-900">{newLicense.license_key}</span>
-                    <button
-                      onClick={() => copyToClipboard(newLicense.license_key)}
-                      className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                    >
-                      <Copy size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className="text-green-600 font-medium">Available</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Credits:</span>
-                  <span className="text-gray-900 font-medium">{license.credit_left}</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleClose}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
-            >
+            <button onClick={handleClose}
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">
               Done
             </button>
           </div>
@@ -114,107 +112,102 @@ const CarryForwardModal = ({ isOpen, license, onClose, onSuccess }) => {
     );
   }
 
-  // Confirmation view
+  // ── Main form ────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">Carry Forward License</h2>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X size={24} />
-          </button>
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
         </div>
 
         <div className="p-6 space-y-4">
           {/* Warning */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-            <AlertTriangle className="text-yellow-600 flex-shrink-0" size={20} />
-            <div className="text-sm text-yellow-800">
-              <p className="font-medium mb-1">Important:</p>
-              <p>This will create a new license and mark the current one as "Carried Forward". This action cannot be undone.</p>
-            </div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-3">
+            <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+            <p className="text-sm text-yellow-800">
+              Remaining credits from the source license will be <strong>added to</strong> the target license.
+              The source will be marked as <strong>Carried Forward</strong> and cannot be used again.
+            </p>
           </div>
 
-          {/* Source License Info */}
+          {/* Source license */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-2">Source License</h3>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">License Key:</span>
-                <span className="text-sm font-mono text-gray-900">{license.license_key}</span>
+            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Key:</span>
+                <span className="font-mono text-gray-900">{license.license_key}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Current Status:</span>
+                <span className="text-gray-500">Status:</span>
                 <LicenseStatusBadge status={license.status} />
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Plan:</span>
-                <span className="text-sm text-gray-900">{license.plan_name || '-'}</span>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Credits to transfer:</span>
+                <span className="font-bold text-blue-700">{license.credit_left} credits</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Credits Remaining:</span>
-                <span className="text-sm font-bold text-green-600">{license.credit_left} credits</span>
-              </div>
-              {license.username && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Username:</span>
-                  <span className="text-sm text-gray-900">{license.username}</span>
-                </div>
-              )}
-              {license.mobile && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Mobile:</span>
-                  <span className="text-sm text-gray-900">{license.mobile}</span>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Transfer Details */}
+          {/* Target license search */}
           <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Transfer Details</h3>
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>{license.credit_left} credits</strong> will be transferred to the new license
-              </p>
-            </div>
-          </div>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Target License <span className="text-red-500">*</span>
+            </h3>
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={e => { setSearchInput(e.target.value); setSearchError(''); setTargetLicense(null); }}
+                placeholder="Enter license key to search"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <button type="submit" disabled={searching || !searchInput.trim()}
+                className="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1">
+                <Search size={15} />
+                {searching ? '...' : 'Find'}
+              </button>
+            </form>
 
-          {/* User Info Transfer Option */}
-          {(license.username || license.mobile || license.vendor_name || license.geo_location) && (
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={transferUserInfo}
-                  onChange={(e) => setTransferUserInfo(e.target.checked)}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <span className="text-sm text-gray-700">
-                  Transfer user information (username, mobile, vendor, location)
-                </span>
-              </label>
-            </div>
-          )}
+            {searchError && (
+              <p className="text-xs text-red-600 mt-1">{searchError}</p>
+            )}
+
+            {targetLicense && (
+              <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-1.5">
+                <p className="text-blue-800 font-medium text-xs uppercase tracking-wide mb-1">Target Found</p>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Key:</span>
+                  <span className="font-mono text-gray-900">{targetLicense.license_key}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Status:</span>
+                  <LicenseStatusBadge status={targetLicense.status} />
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Current credits:</span>
+                  <span className="text-gray-900">{targetLicense.credit_left ?? 0}</span>
+                </div>
+                <div className="flex justify-between border-t border-blue-200 pt-1.5 mt-1.5">
+                  <span className="text-gray-600 font-medium">After transfer:</span>
+                  <span className="font-bold text-green-700">
+                    {(parseInt(targetLicense.credit_left) || 0) + (parseInt(license.credit_left) || 0)} credits
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={handleClose} disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
               Cancel
             </button>
-            <button
-              onClick={handleCarryForward}
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? 'Processing...' : 'Carry Forward License'}
+            <button onClick={handleConfirm} disabled={loading || !targetLicense}
+              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading ? 'Processing...' : 'Confirm Transfer'}
             </button>
           </div>
         </div>

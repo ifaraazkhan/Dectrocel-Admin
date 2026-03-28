@@ -1,16 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useProduct } from '../context/ProductContext';
 import reportsAPI from '../api/reports';
 import toast from 'react-hot-toast';
-import { History, User, Clock } from 'lucide-react';
+import { History, User, Clock, Search, X, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import ComingSoon from './ComingSoon';
+
+const SortIcon = ({ column, sortConfig }) => {
+  if (sortConfig.key !== column) return <ChevronsUpDown size={13} className="text-gray-400 ml-1 inline" />;
+  return sortConfig.direction === 'asc'
+    ? <ChevronUp size={13} className="text-primary-600 ml-1 inline" />
+    : <ChevronDown size={13} className="text-primary-600 ml-1 inline" />;
+};
 
 const AuditLogs = () => {
   const { selectedProduct } = useProduct();
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [logs,       setLogs]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [page,       setPage]       = useState(1);
+  const [total,      setTotal]      = useState(0);
+  const [search,     setSearch]     = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => setSortConfig(prev =>
+    prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }
+  );
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return logs;
+    const q = search.trim().toLowerCase();
+    return logs.filter(l =>
+      l.action?.toLowerCase().includes(q) ||
+      l.admin_name?.toLowerCase().includes(q) ||
+      l.entity_type?.toLowerCase().includes(q) ||
+      l.ip_address?.toLowerCase().includes(q)
+    );
+  }, [logs, search]);
+
+  const sorted = useMemo(() => {
+    if (!sortConfig.key) return filtered;
+    return [...filtered].sort((a, b) => {
+      const av = a[sortConfig.key] ?? '';
+      const bv = b[sortConfig.key] ?? '';
+      const cmp = String(av).localeCompare(String(bv));
+      return sortConfig.direction === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortConfig]);
+
+  const th = (label, key) => (
+    <th onClick={() => handleSort(key)}
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap">
+      {label}<SortIcon column={key} sortConfig={sortConfig} />
+    </th>
+  );
 
   useEffect(() => {
     if (selectedProduct === 'xray') {
@@ -71,41 +112,54 @@ const AuditLogs = () => {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <History size={28} className="text-primary-600" />
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-600 mt-1">Track all admin actions and system events</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <History size={24} className="text-primary-600 flex-shrink-0" />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Audit Logs</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Track all admin actions and system events</p>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Search */}
+      <div className="relative mb-4 w-full sm:w-72">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search action, admin, entity..."
+          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Admin
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Entity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
-                </th>
+                {th('Timestamp', 'created_at')}
+                {th('Admin',     'admin_name')}
+                {th('Action',    'action')}
+                {th('Entity',    'entity_type')}
+                {th('Status',    'response_status')}
+                {th('IP',        'ip_address')}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {logs.map((log) => (
+              {sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    {search ? 'No logs match your search' : 'No audit logs found'}
+                  </td>
+                </tr>
+              ) : null}
+              {sorted.map((log) => (
                 <tr key={log.audit_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center gap-2">
@@ -140,15 +194,7 @@ const AuditLogs = () => {
               ))}
             </tbody>
           </table>
-        </div>
       </div>
-
-      {logs.length === 0 && (
-        <div className="text-center py-12">
-          <History size={48} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">No audit logs found</p>
-        </div>
-      )}
 
       {total > 50 && (
         <div className="mt-4 flex justify-center gap-2">

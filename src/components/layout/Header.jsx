@@ -2,10 +2,10 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { useProduct } from '../../context/ProductContext';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown, Menu } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const Header = () => {
+const Header = ({ onOpenMobile }) => {
   const { user, logout } = useContext(AuthContext);
   const { selectedProduct, setSelectedProduct } = useProduct();
   const navigate = useNavigate();
@@ -18,66 +18,71 @@ const Header = () => {
     navigate('/login');
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <header className="bg-white border-b px-6 py-4">
-      <div className="flex items-center justify-between">
-        {/* Left Side - Product Tabs (X-ray/CT) */}
-        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+    <header className="bg-white border-b px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        {/* Left: hamburger (mobile) + product tabs */}
+        <div className="flex items-center gap-3">
+          {/* Hamburger — mobile only */}
           <button
-            onClick={() => setSelectedProduct('xray')}
-            className={`px-6 py-2 rounded-md font-medium transition-all ${
-              selectedProduct === 'xray'
-                ? 'bg-primary-600 text-white shadow-sm'
-                : 'bg-transparent text-gray-600 hover:text-gray-900'
-            }`}
+            onClick={onOpenMobile}
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Open menu"
           >
-            X-ray
+            <Menu size={22} />
           </button>
-          <button
-            onClick={() => setSelectedProduct('ct')}
-            className={`px-6 py-2 rounded-md font-medium transition-all ${
-              selectedProduct === 'ct'
-                ? 'bg-primary-600 text-white shadow-sm'
-                : 'bg-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            CT
-          </button>
+
+          {/* Product tabs */}
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setSelectedProduct('xray')}
+              className={`px-4 sm:px-6 py-2 rounded-md font-medium transition-all text-sm ${
+                selectedProduct === 'xray'
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'bg-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              X-ray
+            </button>
+            <button
+              onClick={() => setSelectedProduct('ct')}
+              className={`px-4 sm:px-6 py-2 rounded-md font-medium transition-all text-sm ${
+                selectedProduct === 'ct'
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'bg-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              CT
+            </button>
+          </div>
         </div>
 
-        {/* Right Side - User Menu */}
+        {/* Right: user menu */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <User size={18} className="text-primary-600" />
-              </div>
-              <span className="text-sm font-medium">{user?.username || 'Admin'}</span>
+            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <User size={18} className="text-primary-600" />
             </div>
+            <span className="text-sm font-medium hidden sm:block">{user?.username || 'Admin'}</span>
             <ChevronDown
               size={16}
-              className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+              className={`transition-transform hidden sm:block ${isDropdownOpen ? 'rotate-180' : ''}`}
             />
           </button>
 
-          {/* Dropdown Menu */}
           {isDropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
               <div className="px-4 py-2 border-b border-gray-100">

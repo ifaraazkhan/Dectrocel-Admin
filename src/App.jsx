@@ -23,6 +23,7 @@ import SubscriptionActivity from './pages/Subscriptions/SubscriptionActivity';
 import CTAnalysesReport from './pages/Reports/CTAnalysesReport';
 import CTLicenseReport from './pages/Reports/CTLicenseReport';
 import DemoRequestsReport from './pages/Reports/DemoRequestsReport';
+import PlansList from './pages/Plans/PlansList';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -159,6 +160,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <SubscriptionActivity />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/plans"
+              element={
+                <PrivateRoute>
+                  <PlansList />
                 </PrivateRoute>
               }
             />

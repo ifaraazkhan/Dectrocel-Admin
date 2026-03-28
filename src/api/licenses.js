@@ -34,8 +34,10 @@ export const licensesAPI = {
     return response.data;
   },
 
-  carryForward: async (id) => {
-    const response = await apiClient.post(`/admin/licenses/${id}/carry-forward`);
+  carryForward: async (id, targetLicenseId) => {
+    const response = await apiClient.post(`/admin/licenses/${id}/carry-forward`, {
+      target_license_id: targetLicenseId,
+    });
     return response.data;
   },
 

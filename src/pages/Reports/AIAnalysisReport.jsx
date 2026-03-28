@@ -155,11 +155,11 @@ const AIAnalysisReport = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center gap-3">
           <Brain size={28} className="text-primary-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">AI Analysis Report</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">AI Analysis Report</h1>
             <p className="text-gray-600 mt-1">
               Showing {filteredData.length} AI prediction{filteredData.length !== 1 ? 's' : ''}
             </p>
@@ -175,7 +175,7 @@ const AIAnalysisReport = () => {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         <div className="p-4 border-b">
           <input
             type="text"
@@ -193,6 +193,7 @@ const AIAnalysisReport = () => {
           paginationPerPage={25}
           paginationRowsPerPageOptions={[25, 50, 100, 200]}
           highlightOnHover
+          responsive
           customStyles={customStyles}
           noDataComponent={
             <div className="text-center py-12">

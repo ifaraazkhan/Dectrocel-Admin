@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, BookOpen, Pencil } from 'lucide-react';
-import licensesAPI from '../../api/licenses';
+import { ctLicensesAPI } from '../../api/ctAdmin';
 import plansAPI from '../../api/plans';
 import toast from 'react-hot-toast';
 
 const VALIDITY_PRESETS = [30, 90, 180, 365, 730];
 
-const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
+const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
   const [mode, setMode] = useState('plan'); // 'plan' | 'manual'
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(false);
@@ -18,21 +18,22 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const [form, setForm] = useState({
-    num_licenses:  '',
-    credit_left:   '',
-    validity_days: '',
-    vendor_name:   '',
-    geo_location:  '',
+    num_licenses:      '',
+    ct_credits:        '',
+    validity_days:     '',
+    license_app_scope: 'ct',
+    vendor_name:       '',
+    geo_location:      '',
   });
 
   useEffect(() => {
     if (!isOpen) return;
     setPlansLoading(true);
-    plansAPI.getByType('xray_license')
+    plansAPI.getByType('ct_license')
       .then(resp => {
         if (resp.status_code === 'dc200') setPlans(resp.results || []);
       })
-      .catch(() => toast.error('Could not load plans'))
+      .catch(() => toast.error('Could not load CT plans'))
       .finally(() => setPlansLoading(false));
   }, [isOpen]);
 
@@ -52,10 +53,10 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     if (!num || num < 1) { toast.error('Enter a valid number of licenses (min 1)'); return false; }
     if (num > 1000) { toast.error('Maximum 1000 licenses per batch'); return false; }
 
-    const credits = mode === 'plan' ? selectedPlan?.credits : parseInt(form.credit_left);
+    const credits = mode === 'plan' ? selectedPlan?.credits : parseInt(form.ct_credits);
     const validity = mode === 'plan' ? parseInt(selectedPlan?.validity_days) : parseInt(form.validity_days);
 
-    if (!credits || credits < 1) { toast.error('Credits must be at least 1'); return false; }
+    if (!credits || credits < 1) { toast.error('CT Credits must be at least 1'); return false; }
     if (!validity || validity < 1) { toast.error('Validity must be at least 1 day'); return false; }
     if (mode === 'plan' && !selectedPlanId) { toast.error('Please select a plan'); return false; }
     return true;
@@ -68,7 +69,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     const num = parseInt(form.num_licenses);
     if (num > 100 && !showConfirmation) { setShowConfirmation(true); return; }
 
-    const credits = mode === 'plan' ? selectedPlan.credits : parseInt(form.credit_left);
+    const credits = mode === 'plan' ? selectedPlan.credits : parseInt(form.ct_credits);
     const validityDays = mode === 'plan' ? parseInt(selectedPlan.validity_days) : parseInt(form.validity_days);
 
     const endDate = new Date();
@@ -77,22 +78,23 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await licensesAPI.bulkCreate({
-        num_licenses: num,
-        credit_left:  credits,
+      const response = await ctLicensesAPI.bulkCreate({
+        num_licenses:      num,
+        ct_credits:        credits,
         end_date,
-        plan_id:      mode === 'plan' ? parseInt(selectedPlanId) : undefined,
-        vendor_name:  form.vendor_name  || undefined,
-        geo_location: form.geo_location || undefined,
+        plan_id:           mode === 'plan' ? parseInt(selectedPlanId) : undefined,
+        license_app_scope: form.license_app_scope,
+        vendor_name:       form.vendor_name  || undefined,
+        geo_location:      form.geo_location || undefined,
       });
 
       if (response.status_code === 'dc200') {
         setGeneratedLicenses(response.results);
-        toast.success(`${num} licenses generated successfully`);
+        toast.success(`${num} CT licenses generated successfully`);
         onSuccess();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to generate licenses');
+      toast.error(error.response?.data?.message || 'Failed to generate CT licenses');
     } finally {
       setLoading(false);
       setShowConfirmation(false);
@@ -101,10 +103,11 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
 
   const downloadCSV = () => {
     if (!generatedLicenses?.length) return;
-    const headers = ['License Key', 'Credits', 'Status', 'Created Date'];
+    const headers = ['License Key', 'CT Credits', 'Scope', 'Status', 'Created Date'];
     const rows = generatedLicenses.map(l => [
       l.license_key,
-      l.credit_left || 0,
+      l.ct_credits || 0,
+      l.license_app_scope || 'ct',
       l.status,
       new Date().toLocaleDateString(),
     ]);
@@ -113,7 +116,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xray_licenses_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `ct_licenses_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -125,7 +128,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     setMode('plan');
     setSelectedPlanId('');
     setSelectedPlan(null);
-    setForm({ num_licenses: '', credit_left: '', validity_days: '', vendor_name: '', geo_location: '' });
+    setForm({ num_licenses: '', ct_credits: '', validity_days: '', license_app_scope: 'ct', vendor_name: '', geo_location: '' });
     setGeneratedLicenses(null);
     setShowConfirmation(false);
     onClose();
@@ -139,16 +142,17 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Licenses Generated</h2>
+            <h2 className="text-xl font-semibold text-gray-900">CT Licenses Generated</h2>
             <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
           </div>
           <div className="p-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-blue-800 font-medium">
-                ✓ {generatedLicenses.length} X-ray licenses generated successfully
+                ✓ {generatedLicenses.length} CT licenses generated successfully
               </p>
               <p className="text-blue-600 text-xs mt-1">
                 {mode === 'plan' && selectedPlan ? `Plan: ${selectedPlan.plan_name}` : 'Manual entry'}
+                {' · '}Scope: {form.license_app_scope === 'both' ? 'CT + X-ray' : 'CT Only'}
               </p>
             </div>
             <div className="space-y-3">
@@ -161,7 +165,6 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
                 Close
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-4 text-center">License keys are ready for distribution</p>
           </div>
         </div>
       </div>
@@ -170,7 +173,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Confirm large batch
   if (showConfirmation) {
-    const credits = mode === 'plan' ? selectedPlan?.credits : parseInt(form.credit_left);
+    const credits = mode === 'plan' ? selectedPlan?.credits : parseInt(form.ct_credits);
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -180,8 +183,8 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
           <div className="p-6">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-sm text-yellow-800">
-              You're about to generate <strong>{form.num_licenses}</strong> licenses
-              with <strong>{credits} credits</strong> each. This may take a moment.
+              You're about to generate <strong>{form.num_licenses}</strong> CT licenses
+              with <strong>{credits} CT credits</strong> each. This may take a moment.
             </div>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowConfirmation(false)}
@@ -204,7 +207,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">Bulk X-ray License Generation</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Bulk CT License Generation</h2>
           <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
         </div>
 
@@ -218,7 +221,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
             <input
               type="number" value={form.num_licenses} onChange={set('num_licenses')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              placeholder="e.g. 50" min="1" max="1000" required
+              placeholder="e.g. 20" min="1" max="1000" required
             />
             <p className="text-xs text-gray-400 mt-1">Max 1000 per batch</p>
           </div>
@@ -239,20 +242,19 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
               ><Pencil size={15} /> Manual</button>
             </div>
 
-            {/* Plan Mode */}
             {mode === 'plan' && (
               plansLoading ? <p className="text-sm text-gray-400">Loading plans...</p>
               : plans.length === 0 ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
-                  No X-ray license plans found.{' '}
-                  <a href="/plans" className="underline font-medium">Create a plan first</a> or use Manual.
+                  No CT plans found.{' '}
+                  <a href="/plans" className="underline font-medium">Create a CT plan first</a> or use Manual.
                 </div>
               ) : (
                 <>
                   <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   >
-                    <option value="">— Choose a plan —</option>
+                    <option value="">— Choose a CT plan —</option>
                     {plans.map(p => (
                       <option key={p.plan_id} value={p.plan_id}>
                         {p.plan_name} · {p.credits} credits · {p.validity_days} days
@@ -261,23 +263,22 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
                   </select>
                   {selectedPlan && (
                     <div className="mt-2 bg-primary-50 border border-primary-100 rounded-md p-3 text-xs text-primary-800 flex gap-4">
-                      <span>Credits: <strong>{selectedPlan.credits}</strong></span>
+                      <span>CT Credits: <strong>{selectedPlan.credits}</strong></span>
                       <span>Validity: <strong>{selectedPlan.validity_days} days</strong></span>
-                      {form.num_licenses && <span>Total: <strong>{parseInt(form.num_licenses) * selectedPlan.credits} credits</strong></span>}
+                      {form.num_licenses && <span>Total: <strong>{parseInt(form.num_licenses) * selectedPlan.credits} scans</strong></span>}
                     </div>
                   )}
                 </>
               )
             )}
 
-            {/* Manual Mode */}
             {mode === 'manual' && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Credits each <span className="text-red-500">*</span></label>
-                  <input type="number" value={form.credit_left} onChange={set('credit_left')}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CT Credits each <span className="text-red-500">*</span></label>
+                  <input type="number" value={form.ct_credits} onChange={set('ct_credits')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    placeholder="e.g. 500" min="1" />
+                    placeholder="e.g. 100" min="1" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Validity (days) <span className="text-red-500">*</span></label>
@@ -301,9 +302,25 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Scope */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">License Scope</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              {[{ value: 'ct', label: 'CT Only' }, { value: 'both', label: 'CT + X-ray' }].map(opt => (
+                <button key={opt.value} type="button"
+                  onClick={() => setForm(f => ({ ...f, license_app_scope: opt.value }))}
+                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                    form.license_app_scope === opt.value
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >{opt.label}</button>
+              ))}
+            </div>
+          </div>
+
           <hr className="border-gray-100" />
 
-          {/* Vendor / Location */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Vendor (Optional)</label>
@@ -319,7 +336,6 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
           </div>
 
-          {/* Buttons */}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={handleClose} disabled={loading}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
@@ -327,7 +343,7 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
             </button>
             <button type="submit" disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? 'Generating...' : 'Generate Licenses'}
+              {loading ? 'Generating...' : 'Generate CT Licenses'}
             </button>
           </div>
         </form>
@@ -336,4 +352,4 @@ const BulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
   );
 };
 
-export default BulkGenerationModal;
+export default CTBulkGenerationModal;

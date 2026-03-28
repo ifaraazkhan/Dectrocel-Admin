@@ -10,14 +10,14 @@ import UsageComparisonChart from '../components/dashboard/UsageComparisonChart';
 import LicensesByCategoryModal from '../components/dashboard/LicensesByCategoryModal';
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
-  <div className="bg-white rounded-lg shadow p-6">
+  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
     <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-600">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+      <div className="min-w-0 mr-3">
+        <p className="text-xs sm:text-sm text-gray-600 truncate">{title}</p>
+        <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{value}</p>
       </div>
-      <div className={`p-3 rounded-lg ${color}`}>
-        <Icon size={24} className="text-white" />
+      <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${color}`}>
+        <Icon size={20} className="text-white sm:w-6 sm:h-6" />
       </div>
     </div>
   </div>
@@ -63,15 +63,15 @@ const CTDashboard = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">CT Dashboard</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">CT Dashboard</h1>
 
       {/* License stats */}
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Licenses</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Total Licenses"      value={lic.total_licenses        || 0} icon={Key}         color="bg-primary-600" />
-        <StatCard title="In Use"              value={lic.in_use                || 0} icon={Users}        color="bg-blue-600"    />
-        <StatCard title="Available"           value={lic.available             || 0} icon={CheckCircle}  color="bg-teal-600"    />
-        <StatCard title="Credits Remaining"   value={lic.total_credits_remaining || 0} icon={Coins}     color="bg-blue-700"    />
+        <StatCard title="Total Licenses" value={lic.total_licenses || 0} icon={Key}        color="bg-primary-600" />
+        <StatCard title="In Use"         value={lic.in_use        || 0} icon={Users}      color="bg-blue-600"    />
+        <StatCard title="Available"      value={lic.available     || 0} icon={CheckCircle} color="bg-teal-600"   />
+        <StatCard title="Revoked"        value={lic.revoked       || 0} icon={XCircle}    color="bg-red-500"     />
       </div>
 
       {/* Analysis stats */}
@@ -171,7 +171,7 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard

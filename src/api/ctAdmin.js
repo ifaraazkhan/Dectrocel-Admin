@@ -13,6 +13,11 @@ export const ctLicensesAPI = {
     return response.data;
   },
 
+  bulkCreate: async (data) => {
+    const response = await apiClient.post('/admin/ct/licenses/bulk', data);
+    return response.data;
+  },
+
   getById: async (id) => {
     const response = await apiClient.get(`/admin/ct/licenses/${id}`);
     return response.data;
