@@ -205,7 +205,31 @@ const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+        <div className="p-6 border-t bg-gray-50">
+          {/* Refund estimate — only shown when not already revoked */}
+          {license.status !== 'R' && (() => {
+            const planCost   = license.plan_cost   ?? 0;
+            const planCreds  = license.plan_credits ?? 0;
+            const remaining  = license.ct_credits   ?? 0;
+            const refund = (planCost > 0 && planCreds > 0)
+              ? Math.max(0, Math.round((remaining / planCreds) * planCost))
+              : 0;
+            return (
+              <div className={`mb-4 rounded-lg p-3 border flex justify-between items-center ${refund > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-100 border-gray-200'}`}>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Estimated Refund if Blocked</p>
+                  {planCost > 0 && planCreds > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">{remaining} / {planCreds} CT credits remaining · Plan cost ₹{planCost.toLocaleString()}</p>
+                  )}
+                  {(!planCost || planCost <= 0) && (
+                    <p className="text-xs text-gray-400 mt-0.5">No plan cost set — refund not applicable</p>
+                  )}
+                </div>
+                <span className={`text-lg font-bold ${refund > 0 ? 'text-amber-700' : 'text-gray-400'}`}>₹{refund.toLocaleString()}</span>
+              </div>
+            );
+          })()}
+          <div className="flex justify-end gap-3">
           {license.status !== 'R' ? (
             <button
               onClick={handleBlock}
@@ -229,6 +253,7 @@ const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }
           >
             Close
           </button>
+          </div>
         </div>
       </div>
     </div>

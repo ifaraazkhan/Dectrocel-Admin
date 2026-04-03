@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Key, CreditCard, Users, Activity,
   FileText, History, ChevronDown, ChevronRight,
-  Monitor, Globe, BookOpen, PanelLeftClose, PanelLeftOpen, X
+  Monitor, Globe, BookOpen, PanelLeftClose, PanelLeftOpen, X, ShieldCheck
 } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
 
 // ─── Shared nav link builder ──────────────────────────────────────────────────
 
@@ -61,6 +62,8 @@ const NavSection = ({ icon: Icon, label, collapsed, expanded, onToggle, children
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 const Sidebar = ({ product, collapsed, onToggleCollapse, mobileOpen, onCloseMobile }) => {
+  const { user } = useContext(AuthContext);
+  const isSuperAdmin = user?.role === 'SU';
   const [desktopExpanded, setDesktopExpanded] = useState(true);
   const [webAppExpanded,  setWebAppExpanded]  = useState(true);
 
@@ -113,6 +116,12 @@ const Sidebar = ({ product, collapsed, onToggleCollapse, mobileOpen, onCloseMobi
       <NavItem to="/plans"   icon={BookOpen}  label="Plans"      collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/reports" icon={FileText}   label="Reports"    collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/audit"   icon={History}    label="Audit Logs" collapsed={isCollapsed} onClick={onItemClick} />
+      {isSuperAdmin && (
+        <>
+          <div className="border-t border-gray-100 my-2" />
+          <NavItem to="/admin-users" icon={ShieldCheck} label="Admin Users" collapsed={isCollapsed} onClick={onItemClick} />
+        </>
+      )}
     </nav>
   );
 
@@ -144,6 +153,12 @@ const Sidebar = ({ product, collapsed, onToggleCollapse, mobileOpen, onCloseMobi
       <NavItem to="/plans"   icon={BookOpen} label="Plans"      collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/reports" icon={FileText}  label="Reports"    collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/audit"   icon={History}   label="Audit Logs" collapsed={isCollapsed} onClick={onItemClick} />
+      {isSuperAdmin && (
+        <>
+          <div className="border-t border-gray-100 my-2" />
+          <NavItem to="/admin-users" icon={ShieldCheck} label="Admin Users" collapsed={isCollapsed} onClick={onItemClick} />
+        </>
+      )}
     </nav>
   );
 

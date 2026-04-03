@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useProduct } from '../../context/ProductContext';
-import { Plus, PackagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Search, X } from 'lucide-react';
+import { Plus, PackagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Search, X, AlertTriangle } from 'lucide-react';
 import licensesAPI from '../../api/licenses';
 import { ctLicensesAPI } from '../../api/ctAdmin';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ import BulkGenerationModal   from '../../components/licenses/BulkGenerationModal
 import LicenseDetailModal    from '../../components/licenses/LicenseDetailModal';
 import CarryForwardModal     from '../../components/licenses/CarryForwardModal';
 import BlockLicenseModal     from '../../components/licenses/BlockLicenseModal';
+import EditLicenseModal      from '../../components/licenses/EditLicenseModal';
 
 // CT components
 import CTCreateLicenseModal     from '../../components/licenses/CTCreateLicenseModal';
@@ -60,6 +61,7 @@ const XrayLicenseList = () => {
   const [showCreateModal,       setShowCreateModal]       = useState(false);
   const [showBulkModal,         setShowBulkModal]         = useState(false);
   const [showDetailModal,       setShowDetailModal]       = useState(false);
+  const [showEditModal,         setShowEditModal]         = useState(false);
   const [showCarryForwardModal, setShowCarryForwardModal] = useState(false);
   const [showBlockModal,        setShowBlockModal]        = useState(false);
   const [isUnblock,             setIsUnblock]             = useState(false);
@@ -109,6 +111,20 @@ const XrayLicenseList = () => {
 
   const sorted = useSortedData(licenses, sortConfig);
 
+  // Expiry warning: licenses expiring in 0–10 days
+  const [expiryDismissed, setExpiryDismissed] = useState(false);
+  const expiringLicenses = useMemo(() => {
+    const now = new Date();
+    const limit = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+    return licenses.filter(l => {
+      if (!l.end_date) return false;
+      const end = new Date(l.end_date);
+      return end >= now && end <= limit;
+    });
+  }, [licenses]);
+
+  useEffect(() => { setExpiryDismissed(false); }, [licenses]);
+
   const th = (label, key) => (
     <th
       onClick={() => handleSort(key)}
@@ -142,6 +158,24 @@ const XrayLicenseList = () => {
           </button>
         </div>
       </div>
+
+      {/* Expiry Warning Banner */}
+      {!expiryDismissed && expiringLicenses.length > 0 && (
+        <div className="mb-4 flex items-start gap-3 bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-3">
+          <AlertTriangle size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-yellow-800">
+              {expiringLicenses.length} license{expiringLicenses.length > 1 ? 's' : ''} expiring within 10 days
+            </p>
+            <p className="text-xs text-yellow-700 mt-0.5 truncate">
+              {expiringLicenses.map(l => l.license_key).join(', ')}
+            </p>
+          </div>
+          <button onClick={() => setExpiryDismissed(true)} className="text-yellow-500 hover:text-yellow-700 flex-shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 mb-4">
@@ -224,6 +258,7 @@ const XrayLicenseList = () => {
                   <LicenseActionButtons
                     license={license}
                     onViewDetails={(l) => { setSelectedLicense(l); setShowDetailModal(true); }}
+                    onEdit={(l) => { setSelectedLicense(l); setShowEditModal(true); }}
                     onCarryForward={(l) => { setSelectedLicense(l); setShowCarryForwardModal(true); }}
                     onBlock={(l) => { setSelectedLicense(l); setIsUnblock(false); setShowBlockModal(true); }}
                     onUnblock={(l) => { setSelectedLicense(l); setIsUnblock(true); setShowBlockModal(true); }}
@@ -253,6 +288,11 @@ const XrayLicenseList = () => {
       {/* Modals */}
       <CreateLicenseModal   isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={fetchLicenses} />
       <BulkGenerationModal  isOpen={showBulkModal}   onClose={() => setShowBulkModal(false)}   onSuccess={fetchLicenses} />
+      <EditLicenseModal
+        isOpen={showEditModal} licenseId={selectedLicense?.license_id}
+        onClose={() => { setShowEditModal(false); setSelectedLicense(null); }}
+        onSuccess={fetchLicenses}
+      />
       <LicenseDetailModal
         isOpen={showDetailModal} licenseId={selectedLicense?.license_id}
         onClose={() => { setShowDetailModal(false); setSelectedLicense(null); }}
@@ -337,6 +377,20 @@ const CTLicenseList = () => {
 
   const sorted = useSortedData(licenses, sortConfig);
 
+  // Expiry warning: CT licenses expiring in 0–10 days
+  const [expiryDismissed, setExpiryDismissed] = useState(false);
+  const expiringLicenses = useMemo(() => {
+    const now = new Date();
+    const limit = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+    return licenses.filter(l => {
+      if (!l.end_date) return false;
+      const end = new Date(l.end_date);
+      return end >= now && end <= limit;
+    });
+  }, [licenses]);
+
+  useEffect(() => { setExpiryDismissed(false); }, [licenses]);
+
   const th = (label, key) => (
     <th
       onClick={() => handleSort(key)}
@@ -370,6 +424,24 @@ const CTLicenseList = () => {
           </button>
         </div>
       </div>
+
+      {/* Expiry Warning Banner */}
+      {!expiryDismissed && expiringLicenses.length > 0 && (
+        <div className="mb-4 flex items-start gap-3 bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-3">
+          <AlertTriangle size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-yellow-800">
+              {expiringLicenses.length} CT license{expiringLicenses.length > 1 ? 's' : ''} expiring within 10 days
+            </p>
+            <p className="text-xs text-yellow-700 mt-0.5 truncate">
+              {expiringLicenses.map(l => l.license_key).join(', ')}
+            </p>
+          </div>
+          <button onClick={() => setExpiryDismissed(true)} className="text-yellow-500 hover:text-yellow-700 flex-shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 mb-4">

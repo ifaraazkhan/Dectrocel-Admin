@@ -24,6 +24,7 @@ import CTAnalysesReport from './pages/Reports/CTAnalysesReport';
 import CTLicenseReport from './pages/Reports/CTLicenseReport';
 import DemoRequestsReport from './pages/Reports/DemoRequestsReport';
 import PlansList from './pages/Plans/PlansList';
+import AdminUsers from './pages/AdminUsers/AdminUsers';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -200,6 +201,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <DemoRequestsReport />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin-users"
+              element={
+                <PrivateRoute>
+                  <AdminUsers />
                 </PrivateRoute>
               }
             />

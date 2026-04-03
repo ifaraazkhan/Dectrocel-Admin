@@ -1,13 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import licensesAPI from '../../api/licenses';
 import toast from 'react-hot-toast';
 import LicenseStatusBadge from './LicenseStatusBadge';
 
+const calcRefund = (creditLeft, totalCredits, planCost) => {
+  if (!planCost || planCost <= 0 || !totalCredits || totalCredits <= 0) return 0;
+  const refund = Math.round((creditLeft / totalCredits) * planCost);
+  return Math.max(0, refund);
+};
+
 const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = false }) => {
   const [loading, setLoading] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [additionalDetails, setAdditionalDetails] = useState('');
+  const [fullDetails, setFullDetails] = useState(null);
+
+  useEffect(() => {
+    if (isOpen && license && !isUnblock) {
+      fetchFullDetails();
+    }
+  }, [isOpen, license, isUnblock]);
+
+  const fetchFullDetails = async () => {
+    try {
+      const response = await licensesAPI.getById(license.license_id);
+      if (response.status_code === 'dc200') {
+        setFullDetails(response.results);
+      }
+    } catch {
+      // non-critical — refund just won't show
+    }
+  };
 
   const blockReasons = [
     'Fraud Detected',
@@ -31,7 +55,6 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
     try {
       const response = await licensesAPI.update(license.license_id, {
         status: isUnblock ? 'A' : 'R',
-        // Store block reason in error_logs field for now
         error_logs: isUnblock ? null : `${blockReason}${additionalDetails ? `: ${additionalDetails}` : ''}`
       });
 
@@ -41,7 +64,6 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
         handleClose();
       }
     } catch (error) {
-      console.error('Error updating license:', error);
       toast.error(error.response?.data?.message || `Failed to ${isUnblock ? 'unblock' : 'block'} license`);
     } finally {
       setLoading(false);
@@ -51,6 +73,7 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
   const handleClose = () => {
     setBlockReason('');
     setAdditionalDetails('');
+    setFullDetails(null);
     onClose();
   };
 
@@ -63,16 +86,12 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
           <div className="flex items-center justify-between p-6 border-b">
             <h2 className="text-xl font-semibold text-gray-900">Unblock License</h2>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
               <X size={24} />
             </button>
           </div>
 
           <div className="p-6 space-y-4">
-            {/* License Info */}
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">License Key:</span>
@@ -90,27 +109,19 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
               )}
             </div>
 
-            {/* Confirmation Message */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-sm text-green-800">
                 This license will be restored to <strong>Available</strong> status and can be used again.
               </p>
             </div>
 
-            {/* Buttons */}
             <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                disabled={loading}
-              >
+              <button onClick={handleClose} disabled={loading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button
-                onClick={handleBlock}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
-              >
+              <button onClick={handleBlock} disabled={loading}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50">
                 {loading ? 'Unblocking...' : 'Unblock License'}
               </button>
             </div>
@@ -120,16 +131,18 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
     );
   }
 
+  // Compute refund from full details
+  const refundAmount = fullDetails
+    ? calcRefund(fullDetails.credit_left ?? 0, fullDetails.credits ?? 0, fullDetails.plan_cost ?? 0)
+    : null;
+
   // Block confirmation with reason
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">Block License</h2>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -166,11 +179,43 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
             </div>
           </div>
 
+          {/* Refund Estimate */}
+          {fullDetails && (
+            <div className={`rounded-lg p-4 border ${refundAmount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Estimated Refund</p>
+                  {fullDetails.plan_name && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Plan: {fullDetails.plan_name}
+                      {fullDetails.plan_cost > 0 && ` · ₹${fullDetails.plan_cost.toLocaleString()}`}
+                    </p>
+                  )}
+                  {fullDetails.credits > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {fullDetails.credit_left ?? 0} / {fullDetails.credits} credits remaining
+                    </p>
+                  )}
+                </div>
+                <span className={`text-lg font-bold ${refundAmount > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+                  ₹{refundAmount.toLocaleString()}
+                </span>
+              </div>
+              {refundAmount === 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {!fullDetails.plan_cost || fullDetails.plan_cost <= 0
+                    ? 'No plan cost set — refund not applicable'
+                    : 'No credits remaining — no refund due'}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Warning */}
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
             <AlertTriangle className="text-red-600 flex-shrink-0" size={20} />
             <div className="text-sm text-red-800">
-              <p className="font-medium mb-1">⚠️ Blocking this license will:</p>
+              <p className="font-medium mb-1">Blocking this license will:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Prevent any further usage</li>
                 <li>Make remaining credits unavailable</li>
@@ -189,13 +234,10 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
               value={blockReason}
               onChange={(e) => setBlockReason(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              required
             >
               <option value="">Select a reason</option>
               {blockReasons.map((reason) => (
-                <option key={reason} value={reason}>
-                  {reason}
-                </option>
+                <option key={reason} value={reason}>{reason}</option>
               ))}
             </select>
           </div>
@@ -210,24 +252,18 @@ const BlockLicenseModal = ({ isOpen, license, onClose, onSuccess, isUnblock = fa
               onChange={(e) => setAdditionalDetails(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
               rows="3"
-              placeholder="Enter any additional information about why this license is being blocked..."
+              placeholder="Enter any additional information..."
             />
           </div>
 
           {/* Buttons */}
           <div className="flex justify-end gap-3 pt-4">
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
+            <button onClick={handleClose} disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button
-              onClick={handleBlock}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
+            <button onClick={handleBlock} disabled={loading || !blockReason}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50">
               {loading ? 'Blocking...' : 'Block License'}
             </button>
           </div>

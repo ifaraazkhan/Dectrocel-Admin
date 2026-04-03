@@ -1,7 +1,7 @@
 import React from 'react';
-import { Eye, ArrowRight, XCircle, CheckCircle } from 'lucide-react';
+import { Eye, Pencil, ArrowRight, XCircle, CheckCircle } from 'lucide-react';
 
-const LicenseActionButtons = ({ license, onViewDetails, onCarryForward, onBlock, onUnblock }) => {
+const LicenseActionButtons = ({ license, onViewDetails, onEdit, onCarryForward, onBlock, onUnblock }) => {
   return (
     <div className="flex items-center gap-2">
       {/* View Details - Always visible */}
@@ -11,6 +11,15 @@ const LicenseActionButtons = ({ license, onViewDetails, onCarryForward, onBlock,
         title="View full details"
       >
         <Eye size={18} />
+      </button>
+
+      {/* Edit Assignment Info */}
+      <button
+        onClick={() => onEdit && onEdit(license)}
+        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+        title="Edit assignment information"
+      >
+        <Pencil size={18} />
       </button>
 
       {/* Carry Forward - Only if has credits remaining */}
