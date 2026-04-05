@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, BookOpen, Pencil } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { ctLicensesAPI } from '../../api/ctAdmin';
 import plansAPI from '../../api/plans';
 import toast from 'react-hot-toast';
 
-const VALIDITY_PRESETS = [30, 90, 180, 365, 730];
-
 const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
-  const [mode, setMode] = useState('plan'); // 'plan' | 'manual'
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -19,8 +16,6 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
 
   const [form, setForm] = useState({
     num_licenses:      '',
-    ct_credits:        '',
-    validity_days:     '',
     license_app_scope: 'ct',
     vendor_name:       '',
     geo_location:      '',
@@ -52,13 +47,9 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     const num = parseInt(form.num_licenses);
     if (!num || num < 1) { toast.error('Enter a valid number of licenses (min 1)'); return false; }
     if (num > 1000) { toast.error('Maximum 1000 licenses per batch'); return false; }
-
-    const credits = mode === 'plan' ? selectedPlan?.credits : parseInt(form.ct_credits);
-    const validity = mode === 'plan' ? parseInt(selectedPlan?.validity_days) : parseInt(form.validity_days);
-
-    if (!credits || credits < 1) { toast.error('CT Credits must be at least 1'); return false; }
-    if (!validity || validity < 1) { toast.error('Validity must be at least 1 day'); return false; }
-    if (mode === 'plan' && !selectedPlanId) { toast.error('Please select a plan'); return false; }
+    if (!selectedPlanId) { toast.error('Please select a plan'); return false; }
+    if (!selectedPlan?.credits || selectedPlan.credits < 1) { toast.error('Selected plan has invalid credits'); return false; }
+    if (!selectedPlan?.validity_days || parseInt(selectedPlan.validity_days) < 1) { toast.error('Selected plan has invalid validity'); return false; }
     return true;
   };
 
@@ -69,20 +60,17 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
     const num = parseInt(form.num_licenses);
     if (num > 100 && !showConfirmation) { setShowConfirmation(true); return; }
 
-    const credits = mode === 'plan' ? selectedPlan.credits : parseInt(form.ct_credits);
-    const validityDays = mode === 'plan' ? parseInt(selectedPlan.validity_days) : parseInt(form.validity_days);
-
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + validityDays);
+    endDate.setDate(endDate.getDate() + parseInt(selectedPlan.validity_days));
     const end_date = endDate.toISOString().split('T')[0];
 
     setLoading(true);
     try {
       const response = await ctLicensesAPI.bulkCreate({
         num_licenses:      num,
-        ct_credits:        credits,
+        ct_credits:        selectedPlan.credits,
         end_date,
-        plan_id:           mode === 'plan' ? parseInt(selectedPlanId) : undefined,
+        plan_id:           parseInt(selectedPlanId),
         license_app_scope: form.license_app_scope,
         vendor_name:       form.vendor_name  || undefined,
         geo_location:      form.geo_location || undefined,
@@ -125,10 +113,9 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    setMode('plan');
     setSelectedPlanId('');
     setSelectedPlan(null);
-    setForm({ num_licenses: '', ct_credits: '', validity_days: '', license_app_scope: 'ct', vendor_name: '', geo_location: '' });
+    setForm({ num_licenses: '', license_app_scope: 'ct', vendor_name: '', geo_location: '' });
     setGeneratedLicenses(null);
     setShowConfirmation(false);
     onClose();
@@ -150,10 +137,12 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
               <p className="text-blue-800 font-medium">
                 ✓ {generatedLicenses.length} CT licenses generated successfully
               </p>
-              <p className="text-blue-600 text-xs mt-1">
-                {mode === 'plan' && selectedPlan ? `Plan: ${selectedPlan.plan_name}` : 'Manual entry'}
-                {' · '}Scope: {form.license_app_scope === 'both' ? 'CT + X-ray' : 'CT Only'}
-              </p>
+              {selectedPlan && (
+                <p className="text-blue-600 text-xs mt-1">
+                  Plan: {selectedPlan.plan_name}
+                  {' · '}Scope: {form.license_app_scope === 'both' ? 'CT + X-ray' : 'CT Only'}
+                </p>
+              )}
             </div>
             <div className="space-y-3">
               <button onClick={downloadCSV}
@@ -173,7 +162,6 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Confirm large batch
   if (showConfirmation) {
-    const credits = mode === 'plan' ? selectedPlan?.credits : parseInt(form.ct_credits);
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -184,7 +172,7 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="p-6">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-sm text-yellow-800">
               You're about to generate <strong>{form.num_licenses}</strong> CT licenses
-              with <strong>{credits} CT credits</strong> each. This may take a moment.
+              with <strong>{selectedPlan?.credits} CT credits</strong> each. This may take a moment.
             </div>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowConfirmation(false)}
@@ -226,79 +214,39 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
             <p className="text-xs text-gray-400 mt-1">Max 1000 per batch</p>
           </div>
 
-          {/* Mode Toggle */}
+          {/* Plan Selector */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Credits & Validity</label>
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
-              <button type="button" onClick={() => setMode('plan')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${
-                  mode === 'plan' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              ><BookOpen size={15} /> From Plan</button>
-              <button type="button" onClick={() => setMode('manual')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${
-                  mode === 'manual' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              ><Pencil size={15} /> Manual</button>
-            </div>
-
-            {mode === 'plan' && (
-              plansLoading ? <p className="text-sm text-gray-400">Loading plans...</p>
-              : plans.length === 0 ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
-                  No CT plans found.{' '}
-                  <a href="/plans" className="underline font-medium">Create a CT plan first</a> or use Manual.
-                </div>
-              ) : (
-                <>
-                  <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  >
-                    <option value="">— Choose a CT plan —</option>
-                    {plans.map(p => (
-                      <option key={p.plan_id} value={p.plan_id}>
-                        {p.plan_name} · {p.credits} credits · {p.validity_days} days
-                      </option>
-                    ))}
-                  </select>
-                  {selectedPlan && (
-                    <div className="mt-2 bg-primary-50 border border-primary-100 rounded-md p-3 text-xs text-primary-800 flex gap-4">
-                      <span>CT Credits: <strong>{selectedPlan.credits}</strong></span>
-                      <span>Validity: <strong>{selectedPlan.validity_days} days</strong></span>
-                      {form.num_licenses && <span>Total: <strong>{parseInt(form.num_licenses) * selectedPlan.credits} scans</strong></span>}
-                    </div>
-                  )}
-                </>
-              )
-            )}
-
-            {mode === 'manual' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CT Credits each <span className="text-red-500">*</span></label>
-                  <input type="number" value={form.ct_credits} onChange={set('ct_credits')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    placeholder="e.g. 100" min="1" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Validity (days) <span className="text-red-500">*</span></label>
-                  <input type="number" value={form.validity_days} onChange={set('validity_days')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    placeholder="e.g. 365" min="1" />
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {VALIDITY_PRESETS.map(d => (
-                      <button key={d} type="button"
-                        onClick={() => setForm(f => ({ ...f, validity_days: String(d) }))}
-                        className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-                          String(form.validity_days) === String(d)
-                            ? 'bg-primary-600 text-white border-primary-600'
-                            : 'border-gray-300 text-gray-500 hover:border-primary-400'
-                        }`}
-                      >{d}d</button>
-                    ))}
-                  </div>
-                </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Select CT Plan <span className="text-red-500">*</span>
+            </label>
+            {plansLoading ? (
+              <p className="text-sm text-gray-400">Loading plans...</p>
+            ) : plans.length === 0 ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
+                No CT plans found.{' '}
+                <a href="/plans" className="underline font-medium">Create a CT plan first</a>.
               </div>
+            ) : (
+              <>
+                <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  required
+                >
+                  <option value="">— Choose a CT plan —</option>
+                  {plans.map(p => (
+                    <option key={p.plan_id} value={p.plan_id}>
+                      {p.plan_name} · {p.credits} credits · {p.validity_days} days
+                    </option>
+                  ))}
+                </select>
+                {selectedPlan && (
+                  <div className="mt-2 bg-primary-50 border border-primary-100 rounded-md p-3 text-xs text-primary-800 flex gap-4">
+                    <span>CT Credits: <strong>{selectedPlan.credits}</strong></span>
+                    <span>Validity: <strong>{selectedPlan.validity_days} days</strong></span>
+                    {form.num_licenses && <span>Total: <strong>{parseInt(form.num_licenses) * selectedPlan.credits} scans</strong></span>}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -341,7 +289,7 @@ const CTBulkGenerationModal = ({ isOpen, onClose, onSuccess }) => {
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || !selectedPlanId}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? 'Generating...' : 'Generate CT Licenses'}
             </button>

@@ -12,7 +12,21 @@ const PLAN_TABS = [
   { key: 'subscription', label: 'Web Subscription Plans', testTypeId: null },
 ];
 
-const VALIDITY_PRESETS = [30, 90, 180, 365, 730];
+const DAY_PRESETS = [30, 90, 180, 365, 730];
+
+// Convert validity input → days based on mode
+const toDays = (value, mode) => {
+  const n = parseFloat(value);
+  if (!n || n <= 0) return null;
+  if (mode === 'days')   return Math.round(n);
+  if (mode === 'months') return Math.round(n * 30);
+  if (mode === 'years')  return Math.round(n * 365);
+  if (mode === 'date') {
+    const diff = Math.ceil((new Date(value) - new Date()) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : null;
+  }
+  return null;
+};
 
 // ─── Sort helpers ─────────────────────────────────────────────────────────────
 
@@ -44,40 +58,46 @@ const PlanModal = ({ isOpen, plan, planType, onClose, onSuccess }) => {
   const tab = PLAN_TABS.find(t => t.key === planType) || PLAN_TABS[0];
 
   const [loading, setLoading] = useState(false);
+  const [validityMode, setValidityMode] = useState('days'); // 'days' | 'months' | 'years' | 'date'
+  const [validityInput, setValidityInput] = useState('');
   const [form, setForm] = useState({
-    plan_name:    '',
-    credits:      '',
-    validity_days: '',
-    plan_cost:    '',
+    plan_name: '',
+    credits:   '',
+    plan_cost: '',
   });
 
   useEffect(() => {
     if (plan) {
       setForm({
-        plan_name:    plan.plan_name    || '',
-        credits:      plan.credits      ?? '',
-        validity_days: plan.validity_days ?? '',
-        plan_cost:    plan.plan_cost    ?? '',
+        plan_name: plan.plan_name || '',
+        credits:   plan.credits   ?? '',
+        plan_cost: plan.plan_cost ?? '',
       });
+      setValidityMode('days');
+      setValidityInput(String(plan.validity_days ?? ''));
     } else {
-      setForm({ plan_name: '', credits: '', validity_days: '', plan_cost: '' });
+      setForm({ plan_name: '', credits: '', plan_cost: '' });
+      setValidityMode('days');
+      setValidityInput('');
     }
   }, [plan, isOpen]);
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
 
+  const computedDays = toDays(validityInput, validityMode);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.plan_name.trim()) { toast.error('Plan name is required'); return; }
     if (!form.credits || parseInt(form.credits) < 1) { toast.error('Credits must be ≥ 1'); return; }
-    if (!form.validity_days || parseInt(form.validity_days) < 1) { toast.error('Validity must be ≥ 1 day'); return; }
+    if (!computedDays || computedDays < 1) { toast.error('Validity must be ≥ 1 day'); return; }
 
     setLoading(true);
     try {
       const payload = {
         plan_name:    form.plan_name.trim(),
         credits:      parseInt(form.credits),
-        validity_days: String(parseInt(form.validity_days)),
+        validity_days: String(computedDays),
         plan_cost:    parseInt(form.plan_cost) || 0,
         plan_type:    planType,
         test_type_id: tab.testTypeId || 1,
@@ -137,26 +157,72 @@ const PlanModal = ({ isOpen, plan, planType, onClose, onSuccess }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Validity (days) <span className="text-red-500">*</span>
+                Validity <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number" value={form.validity_days} onChange={set('validity_days')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                placeholder="e.g. 365" min="1" required
-              />
-              <div className="flex gap-1 mt-1 flex-wrap">
-                {VALIDITY_PRESETS.map(d => (
+
+              {/* Mode tabs */}
+              <div className="flex rounded-md border border-gray-200 overflow-hidden mb-2 text-xs">
+                {[
+                  { key: 'days',   label: 'Days' },
+                  { key: 'months', label: 'Months' },
+                  { key: 'years',  label: 'Years' },
+                  { key: 'date',   label: 'End Date' },
+                ].map(m => (
                   <button
-                    key={d} type="button"
-                    onClick={() => setForm(f => ({ ...f, validity_days: String(d) }))}
-                    className={`text-xs px-2 py-0.5 rounded border transition-colors ${
-                      String(form.validity_days) === String(d)
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'border-gray-300 text-gray-500 hover:border-primary-400'
+                    key={m.key} type="button"
+                    onClick={() => { setValidityMode(m.key); setValidityInput(''); }}
+                    className={`flex-1 py-1.5 font-medium transition-colors ${
+                      validityMode === m.key
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
                     }`}
-                  >{d}d</button>
+                  >{m.label}</button>
                 ))}
               </div>
+
+              {/* Input */}
+              {validityMode === 'date' ? (
+                <input
+                  type="date"
+                  value={validityInput}
+                  min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                  onChange={e => setValidityInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+              ) : (
+                <>
+                  <input
+                    type="number"
+                    value={validityInput}
+                    onChange={e => setValidityInput(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    placeholder={validityMode === 'months' ? 'e.g. 12' : validityMode === 'years' ? 'e.g. 1' : 'e.g. 365'}
+                    min="1"
+                  />
+                  {validityMode === 'days' && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {DAY_PRESETS.map(d => (
+                        <button
+                          key={d} type="button"
+                          onClick={() => setValidityInput(String(d))}
+                          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+                            validityInput === String(d)
+                              ? 'bg-primary-600 text-white border-primary-600'
+                              : 'border-gray-300 text-gray-500 hover:border-primary-400'
+                          }`}
+                        >{d}d</button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Preview */}
+              {computedDays && (
+                <p className="text-xs text-primary-600 mt-1 font-medium">
+                  = {computedDays} days ({Math.round(computedDays / 30)} mo)
+                </p>
+              )}
             </div>
           </div>
 

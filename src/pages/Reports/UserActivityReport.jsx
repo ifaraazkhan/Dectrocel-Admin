@@ -189,7 +189,7 @@ const UserActivityReport = () => {
         <div className="flex items-center gap-3">
           <Users size={28} className="text-primary-600" />
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Activity Log</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900"> Registered Users</h1>
             <p className="text-gray-600 mt-1">
               Showing {filteredData.length} user{filteredData.length !== 1 ? 's' : ''}
             </p>
@@ -243,7 +243,7 @@ const UserActivityReport = () => {
           noDataComponent={
             <div className="text-center py-12">
               <Users size={48} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">No user activity found</p>
+              <p className="text-gray-500">No registered users found</p>
             </div>
           }
         />

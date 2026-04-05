@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Plus, X, UserCheck, UserX, Shield } from 'lucide-react';
 import adminUsersAPI from '../../api/adminUsers';
+import authAPI from '../../api/auth';
 import { AuthContext } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -123,6 +124,8 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
+  const [twoFaLoading, setTwoFaLoading] = useState(false);
 
   // Guard: only super admin can access
   if (user?.role !== 'SU') {
@@ -149,7 +152,27 @@ const AdminUsers = () => {
     }
   };
 
-  useEffect(() => { fetchAdmins(); }, []);
+  useEffect(() => {
+    fetchAdmins();
+    authAPI.get2FASetting()
+      .then(resp => { if (resp.status_code === 'dc200') setTwoFaEnabled(resp.results.two_fa_enabled); })
+      .catch(() => {});
+  }, []);
+
+  const handleToggle2FA = async () => {
+    setTwoFaLoading(true);
+    try {
+      const resp = await authAPI.set2FASetting(!twoFaEnabled);
+      if (resp.status_code === 'dc200') {
+        setTwoFaEnabled(prev => !prev);
+        toast.success(resp.message);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update 2FA setting');
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
 
   const handleToggleStatus = async (admin) => {
     const newStatus = admin.status === 'A' ? 'I' : 'A';
@@ -180,6 +203,33 @@ const AdminUsers = () => {
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors"
         >
           <Plus size={16} /> Add Admin
+        </button>
+      </div>
+
+      {/* 2FA Toggle — SU only */}
+      <div className={`mb-6 flex items-center justify-between p-4 rounded-lg border ${
+        twoFaEnabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+      }`}>
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Two-Factor Authentication (2FA)</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {twoFaEnabled
+              ? 'All admin logins require OTP verification via SMS'
+              : 'Admins log in with password only — no OTP required'}
+          </p>
+        </div>
+        <button
+          onClick={handleToggle2FA}
+          disabled={twoFaLoading}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+            twoFaEnabled ? 'bg-green-500' : 'bg-gray-300'
+          }`}
+          role="switch"
+          aria-checked={twoFaEnabled}
+        >
+          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+            twoFaEnabled ? 'translate-x-5' : 'translate-x-0'
+          }`} />
         </button>
       </div>
 

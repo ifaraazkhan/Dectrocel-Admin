@@ -228,11 +228,15 @@ const XrayLicenseList = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              {th('#', 'license_id')}
               {th('License Key', 'license_key')}
               {th('Status', 'status')}
               {th('Plan', 'plan_name')}
+              {th('Plan ID', 'plan_id')}
               {th('Credits Left', 'credit_left')}
+              {th('Vendor', 'vendor_name')}
               {th('Username', 'username')}
+              {th('Start Date', 'start_date')}
               {th('End Date', 'end_date')}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -240,17 +244,23 @@ const XrayLicenseList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={11} className="px-6 py-12 text-center text-gray-400 text-sm">
                   {search || statusFilter ? 'No licenses match your filters' : 'No licenses found'}
                 </td>
               </tr>
             ) : sorted.map((license) => (
               <tr key={license.license_id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">{license.license_id}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{license.license_key}</td>
                 <td className="px-6 py-4 whitespace-nowrap"><LicenseStatusBadge status={license.status} /></td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.plan_name || '—'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">{license.plan_id ?? '—'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{license.credit_left ?? 0}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.vendor_name || '—'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.username || '—'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {license.start_date ? new Date(license.start_date).toLocaleDateString() : '—'}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {license.end_date ? new Date(license.end_date).toLocaleDateString() : '—'}
                 </td>

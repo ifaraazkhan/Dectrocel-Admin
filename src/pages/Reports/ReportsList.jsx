@@ -119,7 +119,7 @@ const ReportsList = () => {
     },
     {
       id: 'user-activity',
-      title: 'User Activity Log',
+      title: 'Registered Users',
       description: 'Monitor user registrations, activity, and engagement metrics',
       icon: Users,
       path: '/reports/user-activity',

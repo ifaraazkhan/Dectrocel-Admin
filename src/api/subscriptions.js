@@ -3,17 +3,17 @@ import apiClient from './client';
 export const subscriptionsAPI = {
   // Subscription Plans
   getPlans: async () => {
-    const response = await apiClient.get('/admin/subscriptions/plans');
+    const response = await apiClient.get('/admin/subscriptions/plans', { params: { plan_type: 'subscription' } });
     return response.data;
   },
 
   createPlan: async (planData) => {
-    const response = await apiClient.post('/admin/subscriptions/plans', planData);
+    const response = await apiClient.post('/admin/subscriptions/plans', { ...planData, plan_type: 'subscription' });
     return response.data;
   },
 
   updatePlan: async (planId, planData) => {
-    const response = await apiClient.put(`/admin/subscriptions/plans/${planId}`, planData);
+    const response = await apiClient.put(`/admin/subscriptions/plans/${planId}`, { ...planData, plan_type: 'subscription' });
     return response.data;
   },
 
