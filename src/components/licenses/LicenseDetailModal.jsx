@@ -65,9 +65,10 @@ const LicenseDetailModal = ({ isOpen, licenseId, onClose, onCarryForward, onBloc
 
   if (!license) return null;
 
-  const totalCredits = license.credits || 0;
   const creditsLeft = license.credit_left || 0;
-  const creditsUsed = totalCredits - creditsLeft;
+  // credit_available_online tracks actual total including carry-forwards; fall back to plan credits
+  const totalCredits = Math.max(license.credit_available_online || 0, license.credits || 0, creditsLeft);
+  const creditsUsed = Math.max(0, totalCredits - creditsLeft);
   const usagePercentage = calculateUsagePercentage(totalCredits, creditsLeft);
   const daysRemaining = calculateDaysRemaining(license.end_date);
 
