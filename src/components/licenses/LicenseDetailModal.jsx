@@ -276,8 +276,8 @@ const LicenseDetailModal = ({ isOpen, licenseId, onClose, onCarryForward, onBloc
                 {license.carried_forward_from && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-600">Carried forward from:</span>
-                    <span className="text-sm text-purple-700 font-medium">
-                      License #{license.carried_forward_from}
+                    <span className="text-sm text-purple-700 font-medium font-mono">
+                      {license.carried_forward_from_key || `#${license.carried_forward_from}`}
                     </span>
                   </div>
                 )}
