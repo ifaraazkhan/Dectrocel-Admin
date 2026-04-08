@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProduct } from '../../context/ProductContext';
-import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key, Send } from 'lucide-react';
+import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key, Send, DatabaseZap } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick, badge }) => (
   <div
@@ -43,6 +43,46 @@ const CTReportsList = () => {
       icon: Key,
       path: '/reports/ct-licenses',
       badge: 'CSV Export',
+    },
+    {
+      id: 'ct-license-management',
+      title: 'License Management Report',
+      description: 'Comprehensive view of all CT licenses with status, activation dates, credit usage and user details',
+      icon: FileText,
+      path: '/reports/license-management',
+      badge: 'CSV Export',
+    },
+    {
+      id: 'ct-revenue-payment',
+      title: 'Revenue and Payment Report',
+      description: 'Track revenue, payments, and financial transactions across all CT license purchases',
+      icon: DollarSign,
+      path: '/reports/revenue-payment',
+      badge: 'CSV Export',
+    },
+    {
+      id: 'ct-usage-metrics',
+      title: 'Usage Metrics Report',
+      description: 'Track CT credit utilization and usage patterns across all active CT licenses',
+      icon: TrendingUp,
+      path: '/reports/usage-metrics',
+      badge: 'CSV Export',
+    },
+    {
+      id: 'ct-desktop-sync',
+      title: 'Desktop Sync Monitoring',
+      description: 'Track CT desktop application sync status and data transfer logs',
+      icon: Monitor,
+      path: '/reports/desktop-sync',
+      badge: 'CSV Export',
+    },
+    {
+      id: 'ct-system-health',
+      title: 'System Health Monitoring',
+      description: 'Real-time system status, database metrics, and performance indicators',
+      icon: Activity,
+      path: '/reports/system-health',
+      badge: 'Live',
     },
   ];
 

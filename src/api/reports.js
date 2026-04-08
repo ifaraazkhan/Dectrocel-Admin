@@ -31,8 +31,8 @@ export const reportsAPI = {
     return response.data;
   },
 
-  getSystemHealth: async () => {
-    const response = await apiClient.get('/admin/reports/system-health');
+  getSystemHealth: async (product = 'xray') => {
+    const response = await apiClient.get('/admin/reports/system-health', { params: { product } });
     return response.data;
   },
 

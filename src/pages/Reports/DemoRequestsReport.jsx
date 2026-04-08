@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Download, Send } from 'lucide-react';
+import { Download, Send, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from 'react-data-table-component';
 
 const PRODUCT_OPTIONS = [
@@ -35,6 +36,7 @@ const customStyles = {
 };
 
 const DemoRequestsReport = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
@@ -164,6 +166,9 @@ const DemoRequestsReport = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
+          </button>
           <Send size={28} className="text-primary-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Demo Requests</h1>

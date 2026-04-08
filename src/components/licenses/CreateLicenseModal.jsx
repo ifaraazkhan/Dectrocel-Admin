@@ -13,11 +13,12 @@ const CreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const [form, setForm] = useState({
-    fullname:     '',
-    username:     '',
-    mobile:       '',
-    vendor_name:  '',
-    geo_location: '',
+    fullname:    '',
+    username:    '',
+    mobile:      '',
+    vendor_name: '',
+    latitude:    '',
+    longitude:   '',
   });
 
   // Load X-ray license plans
@@ -67,11 +68,12 @@ const CreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
         credit_left:  selectedPlan.credits,
         end_date,
         plan_id:      parseInt(selectedPlanId),
-        fullname:     form.fullname     || undefined,
-        username:     form.username     || undefined,
-        mobile:       form.mobile       || undefined,
-        vendor_name:  form.vendor_name  || undefined,
-        geo_location: form.geo_location || undefined,
+        fullname:    form.fullname    || undefined,
+        username:    form.username    || undefined,
+        mobile:      form.mobile      || undefined,
+        vendor_name: form.vendor_name || undefined,
+        latitude:    form.latitude    ? parseFloat(form.latitude)  : undefined,
+        longitude:   form.longitude   ? parseFloat(form.longitude) : undefined,
       };
 
       const response = await licensesAPI.createSingle(payload);
@@ -93,7 +95,7 @@ const CreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
   const handleClose = () => {
     setSelectedPlanId('');
     setSelectedPlan(null);
-    setForm({ fullname: '', username: '', mobile: '', vendor_name: '', geo_location: '' });
+    setForm({ fullname: '', username: '', mobile: '', vendor_name: '', latitude: '', longitude: '' });
     onClose();
   };
 
@@ -198,11 +200,19 @@ const CreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Geo Location</label>
-            <input type="text" value={form.geo_location} onChange={set('geo_location')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              placeholder="City / State / Country" />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+              <input type="number" step="any" value={form.latitude} onChange={set('latitude')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                placeholder="e.g. 28.6139" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+              <input type="number" step="any" value={form.longitude} onChange={set('longitude')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                placeholder="e.g. 77.2090" />
+            </div>
           </div>
 
           {/* Buttons */}

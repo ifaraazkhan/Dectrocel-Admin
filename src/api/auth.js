@@ -20,6 +20,11 @@ export const authAPI = {
     const response = await apiClient.put('/admin/settings/2fa', { enabled });
     return response.data;
   },
+
+  changePassword: async ({ current_password, new_password }) => {
+    const response = await apiClient.put('/admin/change-password', { current_password, new_password });
+    return response.data;
+  },
 };
 
 export default authAPI;

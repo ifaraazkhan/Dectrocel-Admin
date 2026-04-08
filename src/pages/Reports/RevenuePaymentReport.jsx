@@ -2,20 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../../context/ProductContext';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Download, DollarSign } from 'lucide-react';
+import { Download, DollarSign, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from 'react-data-table-component';
-import ComingSoon from '../ComingSoon';
 
 const RevenuePaymentReport = () => {
   const { selectedProduct } = useProduct();
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
 
   useEffect(() => {
-    if (selectedProduct === 'xray') {
-      fetchReport();
-    }
+    fetchReport();
   }, [selectedProduct]);
 
   const fetchReport = async () => {
@@ -181,14 +180,13 @@ const RevenuePaymentReport = () => {
   const totalRevenue = data.reduce((sum, item) => sum + (parseInt(item.plan_price) || 0), 0);
   const totalTransactions = data.length;
 
-  if (selectedProduct === 'ct') {
-    return <ComingSoon />;
-  }
-
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
+          </button>
           <DollarSign size={28} className="text-primary-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Revenue and Payment Report</h1>

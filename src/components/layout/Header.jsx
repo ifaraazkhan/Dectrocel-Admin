@@ -2,14 +2,16 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { useProduct } from '../../context/ProductContext';
-import { LogOut, User, ChevronDown, Menu } from 'lucide-react';
+import { LogOut, User, ChevronDown, Menu, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ChangePasswordModal from '../common/ChangePasswordModal';
 
 const Header = ({ onOpenMobile }) => {
   const { user, logout } = useContext(AuthContext);
   const { selectedProduct, setSelectedProduct } = useProduct();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const dropdownRef = useRef(null);
 
   const handleLogout = () => {
@@ -29,6 +31,8 @@ const Header = ({ onOpenMobile }) => {
   }, []);
 
   return (
+    <>
+    <ChangePasswordModal isOpen={showChangePassword} onClose={() => setShowChangePassword(false)} />
     <header className="bg-white border-b px-4 py-4">
       <div className="flex items-center justify-between gap-3">
         {/* Left: hamburger (mobile) + product tabs */}
@@ -91,6 +95,13 @@ const Header = ({ onOpenMobile }) => {
                 <p className="text-xs text-gray-500 mt-0.5">Role: {user?.role || 'Administrator'}</p>
               </div>
               <button
+                onClick={() => { setIsDropdownOpen(false); setShowChangePassword(true); }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <KeyRound size={16} />
+                <span>Change Password</span>
+              </button>
+              <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
               >
@@ -102,6 +113,7 @@ const Header = ({ onOpenMobile }) => {
         </div>
       </div>
     </header>
+    </>
   );
 };
 

@@ -18,6 +18,7 @@ import EditLicenseModal      from '../../components/licenses/EditLicenseModal';
 // CT components
 import CTCreateLicenseModal     from '../../components/licenses/CTCreateLicenseModal';
 import CTLicenseDetailModal     from '../../components/licenses/CTLicenseDetailModal';
+import CTEditLicenseModal       from '../../components/licenses/CTEditLicenseModal';
 import CTBulkGenerationModal    from '../../components/licenses/CTBulkGenerationModal';
 
 // ─── Sort helpers ─────────────────────────────────────────────────────────────
@@ -342,7 +343,9 @@ const CTLicenseList = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkModal,   setShowBulkModal]   = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal,   setShowEditModal]   = useState(false);
   const [selectedId,      setSelectedId]      = useState(null);
+  const [revoking,        setRevoking]        = useState(null);
 
   const fetchLicenses = useCallback(async () => {
     try {
@@ -386,6 +389,20 @@ const CTLicenseList = () => {
   };
 
   const sorted = useSortedData(licenses, sortConfig);
+
+  const handleRevoke = async (lic) => {
+    if (!window.confirm(`Revoke CT license ${lic.license_key}? This action cannot be undone.`)) return;
+    setRevoking(lic.license_id);
+    try {
+      await ctLicensesAPI.update(lic.license_id, { status: 'R' });
+      toast.success('CT license revoked');
+      fetchLicenses();
+    } catch {
+      toast.error('Failed to revoke CT license');
+    } finally {
+      setRevoking(null);
+    }
+  };
 
   // Expiry warning: CT licenses expiring in 0–10 days
   const [expiryDismissed, setExpiryDismissed] = useState(false);
@@ -536,12 +553,29 @@ const CTLicenseList = () => {
                   {lic.end_date ? new Date(lic.end_date).toLocaleDateString() : '—'}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    onClick={() => { setSelectedId(lic.license_id); setShowDetailModal(true); }}
-                    className="text-xs px-3 py-1.5 font-medium text-primary-600 border border-primary-300 rounded-md hover:bg-primary-50 transition-colors"
-                  >
-                    View
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => { setSelectedId(lic.license_id); setShowDetailModal(true); }}
+                      className="text-xs px-2.5 py-1.5 font-medium text-primary-600 border border-primary-300 rounded-md hover:bg-primary-50 transition-colors"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => { setSelectedId(lic.license_id); setShowEditModal(true); }}
+                      className="text-xs px-2.5 py-1.5 font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    {lic.status !== 'R' && (
+                      <button
+                        onClick={() => handleRevoke(lic)}
+                        disabled={revoking === lic.license_id}
+                        className="text-xs px-2.5 py-1.5 font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {revoking === lic.license_id ? '...' : 'Revoke'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -581,6 +615,13 @@ const CTLicenseList = () => {
         onClose={() => { setShowDetailModal(false); setSelectedId(null); }}
         onBlock={fetchLicenses}
         onUnblock={fetchLicenses}
+        onEdit={(lic) => { setSelectedId(lic.license_id); setShowDetailModal(false); setShowEditModal(true); }}
+      />
+      <CTEditLicenseModal
+        isOpen={showEditModal}
+        licenseId={selectedId}
+        onClose={() => { setShowEditModal(false); setSelectedId(null); }}
+        onSuccess={fetchLicenses}
       />
     </div>
   );

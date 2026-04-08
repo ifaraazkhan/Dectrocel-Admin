@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy } from 'lucide-react';
+import { X, Copy, MapPin } from 'lucide-react';
 import { ctLicensesAPI } from '../../api/ctAdmin';
-import licensesAPI from '../../api/licenses';
 import toast from 'react-hot-toast';
 import LicenseStatusBadge from './LicenseStatusBadge';
+import MapViewModal from './MapViewModal';
 
-const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }) => {
+const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock, onEdit }) => {
   const [license, setLicense] = useState(null);
   const [loading, setLoading] = useState(true);
   const [blocking, setBlocking] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (isOpen && licenseId) {
@@ -90,6 +91,8 @@ const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }
   const days = daysRemaining(license.end_date);
 
   return (
+    <>
+    <MapViewModal isOpen={showMap} onClose={() => setShowMap(false)} license={license} />
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 my-8">
         {/* Header */}
@@ -154,16 +157,34 @@ const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               {[
                 ['Full Name', license.fullname],
-                ['Username', license.username],
-                ['Mobile', license.mobile],
-                ['Vendor', license.vendor_name],
-                ['Location', license.geo_location],
+                ['Username',  license.username],
+                ['Mobile',    license.mobile],
+                ['Vendor',    license.vendor_name],
               ].map(([label, val]) => (
                 <div key={label} className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">{label}</span>
                   <span className="text-sm text-gray-900">{val || '-'}</span>
                 </div>
               ))}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Latitude</span>
+                <span className="text-sm text-gray-900">{license.latitude != null ? license.latitude : '-'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Longitude</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-900">{license.longitude != null ? license.longitude : '-'}</span>
+                  {license.latitude != null && license.longitude != null && (
+                    <button
+                      onClick={() => setShowMap(true)}
+                      title="View on Google Maps"
+                      className="flex items-center gap-1 text-xs px-2 py-0.5 text-primary-600 border border-primary-200 rounded-md hover:bg-primary-50 transition-colors"
+                    >
+                      <MapPin size={12} /> Map
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -230,6 +251,14 @@ const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }
             );
           })()}
           <div className="flex justify-end gap-3">
+          {onEdit && (
+            <button
+              onClick={() => { onEdit(license); onClose(); }}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Edit
+            </button>
+          )}
           {license.status !== 'R' ? (
             <button
               onClick={handleBlock}
@@ -257,6 +286,7 @@ const CTLicenseDetailModal = ({ isOpen, licenseId, onClose, onBlock, onUnblock }
         </div>
       </div>
     </div>
+    </>
   );
 };
 

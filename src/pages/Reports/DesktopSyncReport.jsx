@@ -2,20 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../../context/ProductContext';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Download, Monitor } from 'lucide-react';
+import { Download, Monitor, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from 'react-data-table-component';
-import ComingSoon from '../ComingSoon';
 
 const DesktopSyncReport = () => {
   const { selectedProduct } = useProduct();
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
 
   useEffect(() => {
-    if (selectedProduct === 'xray') {
-      fetchReport();
-    }
+    fetchReport();
   }, [selectedProduct]);
 
   const fetchReport = async () => {
@@ -192,14 +191,13 @@ const DesktopSyncReport = () => {
   const syncedCount = data.filter(r => r.sync_status === 'Synced').length;
   const pendingCount = data.filter(r => r.sync_status !== 'Synced').length;
 
-  if (selectedProduct === 'ct') {
-    return <ComingSoon />;
-  }
-
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
+          </button>
           <Monitor size={28} className="text-primary-600" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Desktop Sync Monitoring</h1>

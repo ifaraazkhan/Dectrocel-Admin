@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../../context/ProductContext';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Download, Brain } from 'lucide-react';
+import { Download, Brain, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from 'react-data-table-component';
 import ComingSoon from '../ComingSoon';
 
 const AIAnalysisReport = () => {
   const { selectedProduct } = useProduct();
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
@@ -157,6 +159,9 @@ const AIAnalysisReport = () => {
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
+          </button>
           <Brain size={28} className="text-primary-600" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">AI Analysis Report</h1>

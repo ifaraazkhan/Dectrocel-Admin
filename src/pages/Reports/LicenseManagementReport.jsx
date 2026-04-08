@@ -2,20 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../../context/ProductContext';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Download, Key } from 'lucide-react';
+import { Download, Key, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from 'react-data-table-component';
-import ComingSoon from '../ComingSoon';
 
 const LicenseManagementReport = () => {
   const { selectedProduct } = useProduct();
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
 
   useEffect(() => {
-    if (selectedProduct === 'xray') {
-      fetchReport();
-    }
+    fetchReport();
   }, [selectedProduct]);
 
   const fetchReport = async () => {
@@ -48,7 +47,8 @@ const LicenseManagementReport = () => {
       'Plan',
       'Platform',
       'Vendor',
-      'Location',
+      'Latitude',
+      'Longitude',
       'Last Sync',
     ];
 
@@ -64,7 +64,8 @@ const LicenseManagementReport = () => {
           row.plan,
           row.platform,
           row.vendor_name,
-          row.geo_location,
+          row.latitude ?? '-',
+          row.longitude ?? '-',
           row.last_sync,
         ].join(',')
       ),
@@ -88,7 +89,7 @@ const LicenseManagementReport = () => {
     item.plan?.toLowerCase().includes(filterText.toLowerCase()) ||
     item.platform?.toLowerCase().includes(filterText.toLowerCase()) ||
     item.vendor_name?.toLowerCase().includes(filterText.toLowerCase()) ||
-    item.geo_location?.toLowerCase().includes(filterText.toLowerCase())
+    item.vendor_name?.toLowerCase().includes(filterText.toLowerCase())
   );
 
   const columns = [
@@ -160,11 +161,18 @@ const LicenseManagementReport = () => {
       omit: true // Hidden by default, can be toggled
     },
     {
-      name: 'Location',
-      selector: row => row.geo_location,
+      name: 'Latitude',
+      selector: row => row.latitude ?? '-',
       sortable: true,
-      width: '150px',
-      omit: true // Hidden by default
+      width: '120px',
+      omit: true
+    },
+    {
+      name: 'Longitude',
+      selector: row => row.longitude ?? '-',
+      sortable: true,
+      width: '120px',
+      omit: true
     }
   ];
 
@@ -190,14 +198,13 @@ const LicenseManagementReport = () => {
     }
   };
 
-  if (selectedProduct === 'ct') {
-    return <ComingSoon />;
-  }
-
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
+          </button>
           <Key size={28} className="text-primary-600" />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">License Management Report</h1>

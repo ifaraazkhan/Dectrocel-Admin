@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, CheckCircle } from 'lucide-react';
+import { X, Copy, MapPin } from 'lucide-react';
 import licensesAPI from '../../api/licenses';
 import toast from 'react-hot-toast';
 import LicenseStatusBadge from './LicenseStatusBadge';
+import MapViewModal from './MapViewModal';
 
 const LicenseDetailModal = ({ isOpen, licenseId, onClose, onCarryForward, onBlock, onUnblock }) => {
   const [license, setLicense] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (isOpen && licenseId) {
@@ -73,6 +75,8 @@ const LicenseDetailModal = ({ isOpen, licenseId, onClose, onCarryForward, onBloc
   const daysRemaining = calculateDaysRemaining(license.end_date);
 
   return (
+    <>
+    <MapViewModal isOpen={showMap} onClose={() => setShowMap(false)} license={license} />
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 my-8">
         {/* Header */}
@@ -170,8 +174,23 @@ const LicenseDetailModal = ({ isOpen, licenseId, onClose, onCarryForward, onBloc
                 <span className="text-sm text-gray-900">{license.vendor_name || '-'}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Geo Location:</span>
-                <span className="text-sm text-gray-900">{license.geo_location || '-'}</span>
+                <span className="text-sm font-medium text-gray-600">Latitude:</span>
+                <span className="text-sm text-gray-900">{license.latitude != null ? license.latitude : '-'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Longitude:</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-900">{license.longitude != null ? license.longitude : '-'}</span>
+                  {license.latitude != null && license.longitude != null && (
+                    <button
+                      onClick={() => setShowMap(true)}
+                      title="View on Google Maps"
+                      className="flex items-center gap-1 text-xs px-2 py-0.5 text-primary-600 border border-primary-200 rounded-md hover:bg-primary-50 transition-colors"
+                    >
+                      <MapPin size={12} /> Map
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -348,6 +367,7 @@ const LicenseDetailModal = ({ isOpen, licenseId, onClose, onCarryForward, onBloc
         </div>
       </div>
     </div>
+    </>
   );
 };
 

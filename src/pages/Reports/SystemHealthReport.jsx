@@ -2,24 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../../context/ProductContext';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Activity, RefreshCw, Database, Users, Key, FileText, AlertTriangle } from 'lucide-react';
-import ComingSoon from '../ComingSoon';
+import { Activity, RefreshCw, ArrowLeft, Database, Users, Key, FileText, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SystemHealthReport = () => {
   const { selectedProduct } = useProduct();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isCT = selectedProduct === 'ct';
 
   useEffect(() => {
-    if (selectedProduct === 'xray') {
-      fetchReport();
-    }
+    fetchReport();
   }, [selectedProduct]);
 
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const response = await reportsAPI.getSystemHealth();
+      const response = await reportsAPI.getSystemHealth(selectedProduct);
       if (response.status_code === 'dc200') {
         setData(response.results);
       }
@@ -30,10 +30,6 @@ const SystemHealthReport = () => {
       setLoading(false);
     }
   };
-
-  if (selectedProduct === 'ct') {
-    return <ComingSoon />;
-  }
 
   if (loading) {
     return (
@@ -51,6 +47,9 @@ const SystemHealthReport = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/reports')} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft size={20} />
+          </button>
           <Activity size={28} className="text-primary-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">System Health Monitoring</h1>
@@ -75,14 +74,14 @@ const SystemHealthReport = () => {
               <p className="text-sm font-medium text-red-900">
                 {errorCount} error{errorCount !== 1 ? 's' : ''} detected in the last 24 hours
               </p>
-              <p className="text-xs text-red-600 mt-1">Check audit logs for details</p>
+              {!isCT && <p className="text-xs text-red-600 mt-1">Check audit logs for details</p>}
             </div>
           </div>
         </div>
       )}
 
       {/* Database Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className={`grid grid-cols-1 gap-6 mb-6 ${isCT ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-3 mb-2">
             <Users size={20} className="text-blue-600" />
@@ -116,15 +115,17 @@ const SystemHealthReport = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Database size={20} className="text-orange-600" />
-            <p className="text-sm text-gray-600">Audit Logs</p>
+        {!isCT && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Database size={20} className="text-orange-600" />
+              <p className="text-sm text-gray-600">Audit Logs</p>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {parseInt(stats.total_audit_logs || 0).toLocaleString()}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {parseInt(stats.total_audit_logs || 0).toLocaleString()}
-          </p>
-        </div>
+        )}
       </div>
 
       {/* Credits Overview */}
@@ -172,12 +173,14 @@ const SystemHealthReport = () => {
               {data?.timestamp ? new Date(data.timestamp).toLocaleString() : '-'}
             </p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">System Status</p>
-            <p className="text-sm font-medium text-green-600 mt-1">
-              {errorCount === 0 ? '✓ Healthy' : '⚠ Needs Attention'}
-            </p>
-          </div>
+          {!isCT && (
+            <div>
+              <p className="text-sm text-gray-600">System Status</p>
+              <p className="text-sm font-medium text-green-600 mt-1">
+                {errorCount === 0 ? '✓ Healthy' : '⚠ Needs Attention'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
