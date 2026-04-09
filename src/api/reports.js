@@ -1,18 +1,18 @@
 import apiClient from './client';
 
 export const reportsAPI = {
-  getLicenseManagement: async (params) => {
-    const response = await apiClient.get('/admin/reports/license-management', { params });
+  getLicenseManagement: async (params, product = 'xray') => {
+    const response = await apiClient.get('/admin/reports/license-management', { params: { ...params, product } });
     return response.data;
   },
 
-  getUsageMetrics: async () => {
-    const response = await apiClient.get('/admin/reports/usage-metrics');
+  getUsageMetrics: async (product = 'xray') => {
+    const response = await apiClient.get('/admin/reports/usage-metrics', { params: { product } });
     return response.data;
   },
 
-  getRevenuePayment: async (params) => {
-    const response = await apiClient.get('/admin/reports/revenue-payment', { params });
+  getRevenuePayment: async (params, product = 'xray') => {
+    const response = await apiClient.get('/admin/reports/revenue-payment', { params: { ...params, product } });
     return response.data;
   },
 
@@ -26,8 +26,8 @@ export const reportsAPI = {
     return response.data;
   },
 
-  getDesktopSync: async () => {
-    const response = await apiClient.get('/admin/reports/desktop-sync');
+  getDesktopSync: async (product = 'xray') => {
+    const response = await apiClient.get('/admin/reports/desktop-sync', { params: { product } });
     return response.data;
   },
 

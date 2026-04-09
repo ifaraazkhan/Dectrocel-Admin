@@ -69,14 +69,6 @@ const CTReportsList = () => {
       badge: 'CSV Export',
     },
     {
-      id: 'ct-desktop-sync',
-      title: 'Desktop Sync Monitoring',
-      description: 'Track CT desktop application sync status and data transfer logs',
-      icon: Monitor,
-      path: '/reports/desktop-sync',
-      badge: 'CSV Export',
-    },
-    {
       id: 'ct-system-health',
       title: 'System Health Monitoring',
       description: 'Real-time system status, database metrics, and performance indicators',

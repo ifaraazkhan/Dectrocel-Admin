@@ -20,7 +20,7 @@ const DesktopSyncReport = () => {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const response = await reportsAPI.getDesktopSync();
+      const response = await reportsAPI.getDesktopSync(selectedProduct);
       if (response.status_code === 'dc200') {
         setData(response.results);
       }

@@ -20,7 +20,7 @@ const LicenseManagementReport = () => {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const response = await reportsAPI.getLicenseManagement();
+      const response = await reportsAPI.getLicenseManagement({}, selectedProduct);
       if (response.status_code === 'dc200') {
         setData(response.results);
       }

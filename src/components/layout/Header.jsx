@@ -49,7 +49,7 @@ const Header = ({ onOpenMobile }) => {
           {/* Product tabs */}
           <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
             <button
-              onClick={() => setSelectedProduct('xray')}
+              onClick={() => { setSelectedProduct('xray'); navigate('/'); }}
               className={`px-4 sm:px-6 py-2 rounded-md font-medium transition-all text-sm ${
                 selectedProduct === 'xray'
                   ? 'bg-primary-600 text-white shadow-sm'
@@ -59,7 +59,7 @@ const Header = ({ onOpenMobile }) => {
               X-ray
             </button>
             <button
-              onClick={() => setSelectedProduct('ct')}
+              onClick={() => { setSelectedProduct('ct'); navigate('/'); }}
               className={`px-4 sm:px-6 py-2 rounded-md font-medium transition-all text-sm ${
                 selectedProduct === 'ct'
                   ? 'bg-primary-600 text-white shadow-sm'

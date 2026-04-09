@@ -20,7 +20,7 @@ const UsageMetricsReport = () => {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const response = await reportsAPI.getUsageMetrics();
+      const response = await reportsAPI.getUsageMetrics(selectedProduct);
       if (response.status_code === 'dc200') {
         setData(response.results);
       }
