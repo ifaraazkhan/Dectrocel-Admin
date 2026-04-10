@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useProduct } from '../../context/ProductContext';
 import reportsAPI from '../../api/reports';
 import toast from 'react-hot-toast';
-import { Download, Bell, ArrowLeft } from 'lucide-react';
+import { Download, Bell, ArrowLeft, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from 'react-data-table-component';
 import ComingSoon from '../ComingSoon';
@@ -13,11 +13,15 @@ const NotificationTrackingReport = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
+  const [emailLogs, setEmailLogs] = useState([]);
+  const [emailLogsLoading, setEmailLogsLoading] = useState(true);
+  const [emailFilterText, setEmailFilterText] = useState('');
 
   useEffect(() => {
     if (selectedProduct === 'xray') {
       fetchReport();
     }
+    fetchEmailLogs();
   }, [selectedProduct]);
 
   const fetchReport = async () => {
@@ -32,6 +36,20 @@ const NotificationTrackingReport = () => {
       toast.error('Failed to fetch report');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmailLogs = async () => {
+    try {
+      setEmailLogsLoading(true);
+      const response = await reportsAPI.getEmailLogs();
+      if (response.status_code === 'dc200') {
+        setEmailLogs(response.results);
+      }
+    } catch (error) {
+      console.error('Error fetching email logs:', error);
+    } finally {
+      setEmailLogsLoading(false);
     }
   };
 
@@ -177,6 +195,64 @@ const NotificationTrackingReport = () => {
   const sentCount = data.filter((n) => n.delivery_status === 'sent').length;
   const readCount = data.filter((n) => n.read_status === true).length;
 
+  // Email logs columns
+  const emailColumns = [
+    {
+      name: 'Sent By',
+      selector: row => row.sent_by_name || '-',
+      sortable: true,
+      width: '140px',
+    },
+    {
+      name: 'Recipients',
+      selector: row => row.recipients,
+      sortable: true,
+      grow: 2,
+      cell: row => (
+        <span className="text-xs text-gray-600 truncate max-w-xs" title={row.recipients}>
+          {row.recipients}
+        </span>
+      ),
+    },
+    {
+      name: 'Subject',
+      selector: row => row.subject,
+      sortable: true,
+      grow: 2,
+    },
+    {
+      name: 'Status',
+      selector: row => row.status,
+      sortable: true,
+      width: '100px',
+      cell: row => (
+        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+          row.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+          {row.status}
+        </span>
+      ),
+    },
+    {
+      name: 'Sent At',
+      selector: row => row.sent_at,
+      sortable: true,
+      width: '160px',
+      cell: row => (
+        <span className="text-xs text-gray-600">
+          {row.sent_at ? new Date(row.sent_at).toLocaleString() : '-'}
+        </span>
+      ),
+    },
+  ];
+
+  const filteredEmailLogs = emailLogs.filter(item =>
+    item.sent_by_name?.toLowerCase().includes(emailFilterText.toLowerCase()) ||
+    item.recipients?.toLowerCase().includes(emailFilterText.toLowerCase()) ||
+    item.subject?.toLowerCase().includes(emailFilterText.toLowerCase()) ||
+    item.status?.toLowerCase().includes(emailFilterText.toLowerCase())
+  );
+
   if (selectedProduct === 'ct') {
     return <ComingSoon />;
   }
@@ -254,6 +330,43 @@ const NotificationTrackingReport = () => {
             </div>
           }
         />
+      </div>
+
+      {/* Admin Email Logs */}
+      <div className="mt-8">
+        <div className="flex items-center gap-3 mb-4">
+          <Mail size={22} className="text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Admin Email Logs</h2>
+          <span className="text-sm text-gray-500">({emailLogs.length} total)</span>
+        </div>
+
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="p-4 border-b">
+            <input
+              type="text"
+              placeholder="Search by sender, recipients, subject, or status..."
+              value={emailFilterText}
+              onChange={(e) => setEmailFilterText(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <DataTable
+            columns={emailColumns}
+            data={filteredEmailLogs}
+            progressPending={emailLogsLoading}
+            pagination
+            paginationPerPage={25}
+            paginationRowsPerPageOptions={[25, 50, 100]}
+            highlightOnHover
+            customStyles={customStyles}
+            noDataComponent={
+              <div className="text-center py-12">
+                <Mail size={48} className="mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-500">No email logs found</p>
+              </div>
+            }
+          />
+        </div>
       </div>
     </div>
   );

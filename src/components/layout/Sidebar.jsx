@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Key, CreditCard, Users, Activity,
   FileText, History, ChevronDown, ChevronRight,
-  Monitor, Globe, BookOpen, PanelLeftClose, PanelLeftOpen, X, ShieldCheck
+  Monitor, Globe, BookOpen, PanelLeftClose, PanelLeftOpen, X, ShieldCheck, Mail
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -116,6 +116,8 @@ const Sidebar = ({ product, collapsed, onToggleCollapse, mobileOpen, onCloseMobi
       <NavItem to="/plans"   icon={BookOpen}  label="Plans"      collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/reports" icon={FileText}   label="Reports"    collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/audit"   icon={History}    label="Audit Logs" collapsed={isCollapsed} onClick={onItemClick} />
+      <div className="border-t border-gray-100 my-2" />
+      <NavItem to="/email-box" icon={Mail} label="Email Box" collapsed={isCollapsed} onClick={onItemClick} />
       {isSuperAdmin && (
         <>
           <div className="border-t border-gray-100 my-2" />
@@ -153,6 +155,8 @@ const Sidebar = ({ product, collapsed, onToggleCollapse, mobileOpen, onCloseMobi
       <NavItem to="/plans"   icon={BookOpen} label="Plans"      collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/reports" icon={FileText}  label="Reports"    collapsed={isCollapsed} onClick={onItemClick} />
       <NavItem to="/audit"   icon={History}   label="Audit Logs" collapsed={isCollapsed} onClick={onItemClick} />
+      <div className="border-t border-gray-100 my-2" />
+      <NavItem to="/email-box" icon={Mail} label="Email Box" collapsed={isCollapsed} onClick={onItemClick} />
       {isSuperAdmin && (
         <>
           <div className="border-t border-gray-100 my-2" />

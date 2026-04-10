@@ -50,6 +50,11 @@ export const reportsAPI = {
     const response = await apiClient.get('/admin/reports/demo-requests', { params });
     return response.data;
   },
+
+  getEmailLogs: async () => {
+    const response = await apiClient.get('/admin/email-logs');
+    return response.data;
+  },
 };
 
 export default reportsAPI;

@@ -23,8 +23,10 @@ import SubscriptionActivity from './pages/Subscriptions/SubscriptionActivity';
 import CTAnalysesReport from './pages/Reports/CTAnalysesReport';
 import CTLicenseReport from './pages/Reports/CTLicenseReport';
 import DemoRequestsReport from './pages/Reports/DemoRequestsReport';
+import LicenseMapReport from './pages/Reports/LicenseMapReport';
 import PlansList from './pages/Plans/PlansList';
 import AdminUsers from './pages/AdminUsers/AdminUsers';
+import EmailBox from './pages/EmailBox/EmailBox';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -205,10 +207,26 @@ function App() {
               }
             />
             <Route
+              path="/reports/license-map"
+              element={
+                <PrivateRoute>
+                  <LicenseMapReport />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/admin-users"
               element={
                 <PrivateRoute>
                   <AdminUsers />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/email-box"
+              element={
+                <PrivateRoute>
+                  <EmailBox />
                 </PrivateRoute>
               }
             />

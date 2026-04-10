@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProduct } from '../../context/ProductContext';
-import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key, Send, DatabaseZap } from 'lucide-react';
+import { FileText, TrendingUp, DollarSign, Brain, Users, Monitor, AlertTriangle, Activity, Bell, Cpu, Key, Send, DatabaseZap, Map } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick, badge }) => (
   <div
@@ -75,6 +75,14 @@ const CTReportsList = () => {
       icon: Activity,
       path: '/reports/system-health',
       badge: 'Live',
+    },
+    {
+      id: 'ct-license-map',
+      title: 'License Location Map',
+      description: 'View all CT licenses with coordinates plotted on an interactive map. Search by license key to locate a specific pin.',
+      icon: Map,
+      path: '/reports/license-map',
+      badge: 'Map View',
     },
   ];
 
@@ -180,6 +188,14 @@ const ReportsList = () => {
       icon: Bell,
       path: '/reports/notifications',
       badge: 'CSV Export',
+    },
+    {
+      id: 'license-map',
+      title: 'License Location Map',
+      description: 'View all X-ray licenses with coordinates plotted on an interactive map. Search by license key to locate a specific pin.',
+      icon: Map,
+      path: '/reports/license-map',
+      badge: 'Map View',
     },
   ];
 

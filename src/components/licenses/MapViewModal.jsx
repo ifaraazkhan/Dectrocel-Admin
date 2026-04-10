@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
 import { X, MapPin, Maximize2, Minimize2 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import LicenseStatusBadge from './LicenseStatusBadge';
+
+// Fix Leaflet default marker icons (Vite/webpack bundling issue)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 const MapViewModal = ({ isOpen, onClose, license }) => {
   const [fullscreen, setFullscreen] = useState(false);
@@ -11,11 +22,7 @@ const MapViewModal = ({ isOpen, onClose, license }) => {
   const lng = parseFloat(license.longitude);
   const hasCoords = !isNaN(lat) && !isNaN(lng);
 
-  const mapSrc = hasCoords
-    ? `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`
-    : null;
-
-  const mapHeight = fullscreen ? 'calc(100vh - 190px)' : 320;
+  const mapHeight = fullscreen ? 'calc(100vh - 210px)' : 320;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[70]">
@@ -64,16 +71,26 @@ const MapViewModal = ({ isOpen, onClose, license }) => {
         <div className="px-4 pb-4">
           {hasCoords ? (
             <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: mapHeight }}>
-              <iframe
-                title="License Location"
-                src={mapSrc}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <MapContainer
+                center={[lat, lng]}
+                zoom={15}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={false}
+                key={`${lat}-${lng}-${fullscreen}`}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={[lat, lng]}>
+                  <Popup>
+                    <div className="text-xs">
+                      <p className="font-mono font-semibold">{license.license_key}</p>
+                      <p className="text-gray-500 mt-0.5">{lat.toFixed(5)}, {lng.toFixed(5)}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              </MapContainer>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200 text-gray-400">
