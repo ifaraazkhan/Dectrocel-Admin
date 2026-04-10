@@ -34,14 +34,11 @@ const CTCreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
       .finally(() => setPlansLoading(false));
   }, [isOpen]);
 
-  useEffect(() => {
-    if (selectedPlanId) {
-      const plan = plans.find(p => String(p.plan_id) === String(selectedPlanId));
-      setSelectedPlan(plan || null);
-    } else {
-      setSelectedPlan(null);
-    }
-  }, [selectedPlanId, plans]);
+  const handlePlanChange = (e) => {
+    const idx = e.target.value;
+    setSelectedPlanId(idx);
+    setSelectedPlan(idx !== '' ? plans[parseInt(idx)] || null : null);
+  };
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
 
@@ -67,7 +64,7 @@ const CTCreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
       const response = await ctLicensesAPI.create({
         ct_credits:        selectedPlan.credits,
         end_date,
-        plan_id:           parseInt(selectedPlanId),
+        plan_id:           selectedPlan.plan_id,
         license_app_scope: form.license_app_scope,
         fullname:          form.fullname     || undefined,
         username:          form.username     || undefined,
@@ -130,13 +127,13 @@ const CTCreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
               <>
                 <select
                   value={selectedPlanId}
-                  onChange={e => setSelectedPlanId(e.target.value)}
+                  onChange={handlePlanChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   required
                 >
                   <option value="">— Choose a plan —</option>
-                  {plans.map(p => (
-                    <option key={p.plan_id} value={p.plan_id}>
+                  {plans.map((p, idx) => (
+                    <option key={idx} value={String(idx)}>
                       {p.plan_name} · {p.credits} credits · {p.validity_days} days
                       {p.plan_cost > 0 ? ` · ₹${p.plan_cost}` : ''}
                     </option>
@@ -239,7 +236,7 @@ const CTCreateLicenseModal = ({ isOpen, onClose, onSuccess }) => {
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={loading || !selectedPlanId}
+            <button type="submit" disabled={loading || !selectedPlan}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? 'Creating...' : 'Generate CT License'}
             </button>
