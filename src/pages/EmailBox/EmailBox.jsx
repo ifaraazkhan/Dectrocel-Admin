@@ -91,7 +91,7 @@ const EmailBox = () => {
         {/* From */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
           <span className="text-sm text-gray-400 w-16 flex-shrink-0">From</span>
-          <span className="text-sm text-gray-700">support@dectrocel.com</span>
+          <span className="text-sm text-gray-700">support@the-decxpert.com</span>
         </div>
 
         {/* To */}
