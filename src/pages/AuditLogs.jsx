@@ -3,7 +3,6 @@ import { useProduct } from '../context/ProductContext';
 import reportsAPI from '../api/reports';
 import toast from 'react-hot-toast';
 import { History, User, Clock, Search, X, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import ComingSoon from './ComingSoon';
 
 const SortIcon = ({ column, sortConfig }) => {
   if (sortConfig.key !== column) return <ChevronsUpDown size={13} className="text-gray-400 ml-1 inline" />;
@@ -54,9 +53,7 @@ const AuditLogs = () => {
   );
 
   useEffect(() => {
-    if (selectedProduct === 'xray') {
-      fetchLogs();
-    }
+    fetchLogs();
   }, [selectedProduct, page]);
 
   const fetchLogs = async () => {
@@ -97,10 +94,6 @@ const AuditLogs = () => {
       minute: '2-digit',
     });
   };
-
-  if (selectedProduct === 'ct') {
-    return <ComingSoon />;
-  }
 
   if (loading) {
     return (
