@@ -12,6 +12,7 @@ import CreateLicenseModal    from '../../components/licenses/CreateLicenseModal'
 import BulkGenerationModal   from '../../components/licenses/BulkGenerationModal';
 import LicenseDetailModal    from '../../components/licenses/LicenseDetailModal';
 import CarryForwardModal     from '../../components/licenses/CarryForwardModal';
+import CarryForwardSuccessModal from '../../components/licenses/CarryForwardSuccessModal';
 import BlockLicenseModal     from '../../components/licenses/BlockLicenseModal';
 import EditLicenseModal      from '../../components/licenses/EditLicenseModal';
 
@@ -54,6 +55,8 @@ const XrayLicenseList = () => {
   const [searchInput, setSearchInput] = useState('');
   const [search,      setSearch]      = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [planFilter,   setPlanFilter]   = useState('');
+  const [plans,        setPlans]        = useState([]);
 
   // Sort
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -64,6 +67,7 @@ const XrayLicenseList = () => {
   const [showDetailModal,       setShowDetailModal]       = useState(false);
   const [showEditModal,         setShowEditModal]         = useState(false);
   const [showCarryForwardModal, setShowCarryForwardModal] = useState(false);
+  const [carryForwardResult,   setCarryForwardResult]   = useState(null);
   const [showBlockModal,        setShowBlockModal]        = useState(false);
   const [isUnblock,             setIsUnblock]             = useState(false);
   const [selectedLicense,       setSelectedLicense]       = useState(null);
@@ -76,6 +80,7 @@ const XrayLicenseList = () => {
         limit: 50,
         search: search.trim() || undefined,
         status: statusFilter  || undefined,
+        plan_id: planFilter    || undefined,
       });
       if (response.status_code === 'dc200') {
         setLicenses(response.results.licenses);
@@ -86,9 +91,18 @@ const XrayLicenseList = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, planFilter]);
 
   useEffect(() => { fetchLicenses(); }, [fetchLicenses]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await licensesAPI.getPlans();
+        if (resp.status_code === 'dc200') setPlans(resp.results || []);
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -215,8 +229,20 @@ const XrayLicenseList = () => {
             <option value="R">Revoked</option>
             <option value="E">Expired</option>
           </select>
-          {(search || statusFilter) && (
-            <button onClick={() => { clearSearch(); setStatusFilter(''); setPage(1); }}
+          <select
+            value={planFilter}
+            onChange={e => { setPlanFilter(e.target.value); setPage(1); }}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Plans</option>
+            {plans.map(p => (
+              <option key={p.plan_id} value={p.plan_id}>
+                {p.plan_id}-{p.plan_name}
+              </option>
+            ))}
+          </select>
+          {(search || statusFilter || planFilter) && (
+            <button onClick={() => { clearSearch(); setStatusFilter(''); setPlanFilter(''); setPage(1); }}
               className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-md hover:bg-gray-50 shrink-0">
               Clear
             </button>
@@ -314,7 +340,12 @@ const XrayLicenseList = () => {
       <CarryForwardModal
         isOpen={showCarryForwardModal} license={selectedLicense}
         onClose={() => { setShowCarryForwardModal(false); setSelectedLicense(null); }}
-        onSuccess={fetchLicenses}
+        onSuccess={(result) => { setCarryForwardResult(result); fetchLicenses(); }}
+      />
+      <CarryForwardSuccessModal
+        isOpen={!!carryForwardResult}
+        data={carryForwardResult}
+        onClose={() => setCarryForwardResult(null)}
       />
       <BlockLicenseModal
         isOpen={showBlockModal} license={selectedLicense} isUnblock={isUnblock}

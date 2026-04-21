@@ -41,6 +41,15 @@ export const licensesAPI = {
     return response.data;
   },
 
+  // New carry-forward: generates a fresh license under the same plan with user-entered credits + validity
+  carryForwardNew: async (id, { credits, validity_days }) => {
+    const response = await apiClient.post(`/admin/licenses/${id}/carry-forward-new`, {
+      credits,
+      validity_days,
+    });
+    return response.data;
+  },
+
   getPlans: async () => {
     const response = await apiClient.get('/admin/plans');
     return response.data;
