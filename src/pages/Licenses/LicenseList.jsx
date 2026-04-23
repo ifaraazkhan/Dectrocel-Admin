@@ -578,6 +578,7 @@ const CTLicenseList = () => {
             <tr>
               {th('License Key', 'license_key')}
               {th('Status', 'status')}
+              {th('Plan', 'plan_name')}
               {th('CT Credits', 'ct_credits')}
               {th('Scope', 'license_app_scope')}
               {th('Name / Username', 'fullname')}
@@ -589,7 +590,7 @@ const CTLicenseList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={9} className="px-6 py-12 text-center text-gray-400 text-sm">
                   {search || statusFilter ? 'No CT licenses match your filters' : 'No CT licenses found'}
                 </td>
               </tr>
@@ -597,6 +598,7 @@ const CTLicenseList = () => {
               <tr key={lic.license_id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-900">{lic.license_key}</td>
                 <td className="px-4 py-3 whitespace-nowrap"><LicenseStatusBadge status={lic.status} /></td>
+                <td className="px-4 py-3 text-sm text-gray-500 break-words max-w-[160px]">{lic.plan_name || '—'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{lic.ct_credits ?? 0}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
