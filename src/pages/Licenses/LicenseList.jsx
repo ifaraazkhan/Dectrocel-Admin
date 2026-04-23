@@ -3,6 +3,7 @@ import { useProduct } from '../../context/ProductContext';
 import { Plus, PackagePlus, ChevronUp, ChevronDown, ChevronsUpDown, Search, X, AlertTriangle } from 'lucide-react';
 import licensesAPI from '../../api/licenses';
 import { ctLicensesAPI } from '../../api/ctAdmin';
+import plansAPI from '../../api/plans';
 import toast from 'react-hot-toast';
 
 // X-ray components
@@ -143,7 +144,7 @@ const XrayLicenseList = () => {
   const th = (label, key) => (
     <th
       onClick={() => handleSort(key)}
-      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
+      className="px-2 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none whitespace-nowrap"
     >
       {label}<SortIcon column={key} sortConfig={sortConfig} />
     </th>
@@ -265,7 +266,7 @@ const XrayLicenseList = () => {
               {th('Username', 'username')}
               {th('Start Date', 'start_date')}
               {th('End Date', 'end_date')}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-2 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -277,21 +278,21 @@ const XrayLicenseList = () => {
               </tr>
             ) : sorted.map((license) => (
               <tr key={license.license_id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">{license.license_id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{license.license_key}</td>
-                <td className="px-6 py-4 whitespace-nowrap"><LicenseStatusBadge status={license.status} /></td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.plan_name || '—'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">{license.plan_id ?? '—'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{license.credit_left ?? 0}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.vendor_name || '—'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{license.username || '—'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-400">{license.license_id}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xs font-mono text-gray-900">{license.license_key}</td>
+                <td className="px-2 py-2 whitespace-nowrap"><LicenseStatusBadge status={license.status} /></td>
+                <td className="px-2 py-2 text-xs text-gray-500 break-words">{license.plan_name || '—'}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-400">{license.plan_id ?? '—'}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-700 font-medium">{license.credit_left ?? 0}</td>
+                <td className="px-2 py-2 text-xs text-gray-500 break-words max-w-[120px]">{license.vendor_name || '—'}</td>
+                <td className="px-2 py-2 text-xs text-gray-500 break-words max-w-[120px]">{license.username || '—'}</td>
+                <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
                   {license.start_date ? new Date(license.start_date).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
                   {license.end_date ? new Date(license.end_date).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-2 py-2 whitespace-nowrap">
                   <LicenseActionButtons
                     license={license}
                     onViewDetails={(l) => { setSelectedLicense(l); setShowDetailModal(true); }}
@@ -369,6 +370,8 @@ const CTLicenseList = () => {
   const [searchInput,  setSearchInput]  = useState('');
   const [search,       setSearch]       = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [planFilter,   setPlanFilter]   = useState('');
+  const [plans,        setPlans]        = useState([]);
   const [sortConfig,   setSortConfig]   = useState({ key: null, direction: 'asc' });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -385,6 +388,7 @@ const CTLicenseList = () => {
         page, limit: 50,
         search: search.trim() || undefined,
         status: statusFilter  || undefined,
+        plan_id: planFilter   || undefined,
       });
       if (response.status_code === 'dc200') {
         setLicenses(response.results.licenses);
@@ -395,9 +399,18 @@ const CTLicenseList = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, planFilter]);
 
   useEffect(() => { fetchLicenses(); }, [fetchLicenses]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await plansAPI.getByType('ct_license');
+        if (resp.status_code === 'dc200') setPlans(resp.results || []);
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -537,8 +550,20 @@ const CTLicenseList = () => {
             <option value="R">Revoked</option>
             <option value="E">Expired</option>
           </select>
-          {(search || statusFilter) && (
-            <button onClick={() => { clearSearch(); setStatusFilter(''); setPage(1); }}
+          <select
+            value={planFilter}
+            onChange={e => { setPlanFilter(e.target.value); setPage(1); }}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Plans</option>
+            {plans.map(p => (
+              <option key={p.plan_id} value={p.plan_id}>
+                {p.plan_id}-{p.plan_name}
+              </option>
+            ))}
+          </select>
+          {(search || statusFilter || planFilter) && (
+            <button onClick={() => { clearSearch(); setStatusFilter(''); setPlanFilter(''); setPage(1); }}
               className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-md hover:bg-gray-50 shrink-0">
               Clear
             </button>
